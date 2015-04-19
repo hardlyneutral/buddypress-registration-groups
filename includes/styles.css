@@ -3,7 +3,12 @@
 	width: 48%;
 }
 
-#registration-groups-section label {
+.reg_groups_group_checkbox {
+	margin: 0 5px 0 0;
+}
+
+#buddypress .standard-form label.reg_groups_group_label,
+.reg_groups_group_label {
 	display: inline;
 	font-weight: normal;
 }
