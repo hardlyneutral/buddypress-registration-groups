@@ -6,11 +6,11 @@ Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 
-Tested up to: WordPress 4.1.1 / BuddyPress 2.2.2.1
+Tested up to: WordPress 4.2.2 / BuddyPress 2.3.1
 
 License: GNU/GPL 2
 
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -44,6 +44,9 @@ Hit me up on [my website](http://hardlyneutral.com) and let me know. I only do t
 
 Changelog
 ---------
+###1.0.3
+* Tested plugin as functional with WordPress 4.2.2 and BuddyPress 2.3.1
+
 ###1.0.2
 * Tested plugin as functional with WordPress 4.1.1 and BuddyPress 2.2.2.1
 * Addressed an issue with labels appearing below their checkboxes caused by a change to the BuddyPress core CSS
