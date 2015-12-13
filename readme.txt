@@ -46,8 +46,9 @@ No, it does not. The BuddyPress core makes it a bit difficult to easily get thes
 Hit me up on my website (http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
 
 == Screenshots ==
-1. Screenshot of the plugin listing groups on the new user registration page.
-2. Screenshot of the admin settings menu and options.
+1. Screenshot of the plugin showing groups as a list of checkboxes on the new user registration page.
+2. Screenshot of the plugin showing groups as a list of checkboxes in a scrollable container on the new user registration page.
+3. Screenshot of the admin settings menu and options.
 
 == Changelog ==
 
