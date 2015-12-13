@@ -388,7 +388,7 @@ class BPRegistrationGroupsSettingsPage
     	_e( '<br />' );
 
     	printf(
-			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> Something Else',
+			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> Multiselect',
 			isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '2' ? 'checked="checked"' : ''
     	);
     }
