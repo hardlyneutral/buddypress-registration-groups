@@ -24,7 +24,24 @@
 	}
 }
 
+.reg_groups_item {
+	list-style: none;
+}
+
 .reg_groups_none {
 	font-style: italic;
 	color: gray;
+}
+
+/**
+ * Styling the for the 'multiselect' version of the
+ * checkboxes. Matches the default BuddyPress form fields
+ * look. Override to match your theme.
+ */
+.reg_groups_list_multiselect {
+    height: 8em;
+		border: 1px solid #ccc;
+		background: #fafafa;
+		padding: 6px;
+    overflow: auto;
 }
