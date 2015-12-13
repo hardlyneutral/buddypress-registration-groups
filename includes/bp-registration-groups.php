@@ -234,6 +234,14 @@ class BPRegistrationGroupsSettingsPage
             'bp_registration_groups_display_options_section_id'
         );
 
+				add_settings_field(
+						'bp_registration_groups_display_as',
+						'Display As',
+						array( $this, 'bp_registration_groups_display_as_callback' ),
+						'bp-registration-groups-settings-admin',
+						'bp_registration_groups_display_options_section_id'
+				);
+
         add_settings_field(
             'bp_registration_groups_show_private_groups',
             'Show Private Groups',
@@ -267,6 +275,9 @@ class BPRegistrationGroupsSettingsPage
 
         if( isset( $input['bp_registration_groups_display_order'] ) )
             $new_input['bp_registration_groups_display_order'] = sanitize_text_field( $input['bp_registration_groups_display_order'] );
+
+				if( isset( $input['bp_registration_groups_display_as'] ) )
+            $new_input['bp_registration_groups_display_as'] = absint( $input['bp_registration_groups_display_as'] );
 
         if( isset( $input['bp_registration_groups_show_private_groups'] ) )
             $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
@@ -361,6 +372,24 @@ class BPRegistrationGroupsSettingsPage
     	printf(
 			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="most-forum-posts"> Most Forum Posts',
 			isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'most-forum-posts' ? 'checked="checked"' : ''
+    	);
+    }
+
+		/**
+     * Get the settings option array and print one of its values
+     */
+    public function bp_registration_groups_display_as_callback()
+    {
+    	printf(
+			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="1"> Checkboxes (default)',
+			!isset($this->options['bp_registration_groups_display_as_checkboxes']) || isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '1' ? 'checked="checked"' : ''
+    	);
+
+    	_e( '<br />' );
+
+    	printf(
+			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> Something Else',
+			isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '2' ? 'checked="checked"' : ''
     	);
     }
 
