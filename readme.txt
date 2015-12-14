@@ -1,6 +1,6 @@
 === BuddyPress Registration Groups ===
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.1.0
+Version: 1.1.1
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 Tested up to: WordPress 4.4 / BuddyPress 2.4.2
@@ -51,6 +51,9 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 3. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+
+= 1.1.1 =
+* Added an option to display groups as radio buttons
 
 = 1.1.0 =
 * Tested plugin as functional with WordPress 4.4 and BuddyPress 2.4.2
@@ -128,6 +131,9 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 * First version!
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+* Added an option to display groups as radio buttons. Safe to upgrade.
 
 = 1.1.0 =
 * Tested plugin as functional with WordPress 4.4 and BuddyPress 2.4.2. Safe to upgrade.

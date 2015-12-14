@@ -10,7 +10,7 @@ Tested up to: WordPress 4.4 / BuddyPress 2.4.2
 
 License: GNU/GPL 2
 
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -44,6 +44,9 @@ Hit me up on [my website](http://hardlyneutral.com) and let me know. I only do t
 
 Changelog
 ---------
+###1.1.1
+* Added an option to display groups as radio buttons
+
 ###1.1.0
 * Tested plugin as functional with WordPress 4.4 and BuddyPress 2.4.2
 * Fixed a bug where list bullets would show up in some themes

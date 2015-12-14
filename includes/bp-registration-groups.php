@@ -41,7 +41,10 @@ function bp_registration_groups(){
 	$bp_registration_groups_display_order = ( isset( $bp_registration_groups_options['bp_registration_groups_display_order'] ) && in_array($bp_registration_groups_options['bp_registration_groups_display_order'], $bp_registration_groups_display_order_options, true) ) ? $bp_registration_groups_options['bp_registration_groups_display_order'] : 'alphabetical';
 
 	// set $bp_registration_groups_display_as to 'reg_groups_list_multiselect' if the stored value is 2; set to 'reg_groups_list' otherwise
-	$bp_registration_groups_display_as = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] != '1' ) ? 'reg_groups_list_multiselect' : 'reg_groups_list';
+	$bp_registration_groups_display_as = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] != '2' ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
+
+	// set $bp_registration_groups_input_type to 'radio' if the stored value is not 1; set to 'checkbox' otherwise
+	$bp_registration_groups_input_type = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] == '3' ) ? 'radio' : 'checkbox';
 
 	// set $bp_registration_groups_show_private_groups to array( 'public', 'private' ) if the stored option is "1" or array( 'public', 'private' ) otherwise
 	$bp_registration_groups_show_private_groups = ( !isset($bp_registration_groups_options['bp_registration_groups_show_private_groups']) || $bp_registration_groups_options['bp_registration_groups_show_private_groups'] != '1' ) ? array( 'public' ) : array ( 'public', 'private' );
@@ -58,7 +61,7 @@ function bp_registration_groups(){
 				<?php if ( bp_has_groups('type='.$bp_registration_groups_display_order.'&per_page='.groups_get_total_group_count() ) ) : while ( bp_groups() && $l < $bp_registration_groups_number_displayed ) : bp_the_group(); ?>
 					<?php if ( in_array( bp_get_group_status(), $bp_registration_groups_show_private_groups, true ) ) { ?>
 					<li class="reg_groups_item">
-						<input class="reg_groups_group_checkbox" type="checkbox" id="field_reg_groups_<?php echo $i; ?>" name="field_reg_groups[]" value="<?php bp_group_id(); ?>" /><label class="reg_groups_group_label" for="field_reg_groups[]"><?php printf( __( '%s', 'buddypress-registration-groups-1' ), bp_get_group_name() ); ?></label>
+						<input class="reg_groups_group_checkbox" type="<?php _e( $bp_registration_groups_input_type, 'buddypress-registration-groups-1' ); ?>" id="field_reg_groups_<?php echo $i; ?>" name="field_reg_groups[]" value="<?php bp_group_id(); ?>" /><label class="reg_groups_group_label" for="field_reg_groups[]"><?php printf( __( '%s', 'buddypress-registration-groups-1' ), bp_get_group_name() ); ?></label>
 					</li>
 					<?php $l++; ?>
 					<?php } ?>
@@ -393,9 +396,16 @@ class BPRegistrationGroupsSettingsPage
     	_e( '<br />' );
 
     	printf(
-			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> Multiselect',
+			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> Checkboxes Multiselect',
 			isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '2' ? 'checked="checked"' : ''
     	);
+
+			_e( '<br />' );
+
+			printf(
+			'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="3"> Radio Buttons',
+			isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '3' ? 'checked="checked"' : ''
+			);
     }
 
     /**
