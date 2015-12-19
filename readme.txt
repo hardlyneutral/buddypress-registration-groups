@@ -1,9 +1,9 @@
 === BuddyPress Registration Groups ===
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.1.1
+Version: 1.1.2
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
-Tested up to: WordPress 4.4 / BuddyPress 2.4.2
+Tested up to: WordPress 4.4 / BuddyPress 2.4.3
 License: GNU/GPL 2
 Author: Eric Johnson
 Author URI: http://hardlyneutral.com/
@@ -15,10 +15,17 @@ Allows a new BuddyPress user to select groups to join during the registration pr
 
 == Description ==
 
-This plugin is built to display BuddyPress groups on the new user registration page in a list where the user can
-select, via checkbox, which groups they would like to join upon account activation. Options are available in the
-admin area to configure the text shown on the registration page, the types of groups shown (public or public AND
-private), the order in which groups are displayed, and how many groups will be displayed.
+This plugin is built to display BuddyPress groups on the new user registration page. Groups can be displayed as:
+
+* a list of checkboxes
+* a list of checkboxes in a scrollable container
+* a list of radio buttons
+
+New users will automatically join any of the groups selected during the registration process.
+
+Options are available in the admin area to configure the title of the groups list on the registration page, the
+description of the groups list, whether private groups are visible to new users, the order in which groups are
+displayed, and how many groups will be visible.
 
 == Installation ==
 
@@ -48,9 +55,15 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 == Screenshots ==
 1. Screenshot of the plugin showing groups as a list of checkboxes on the new user registration page.
 2. Screenshot of the plugin showing groups as a list of checkboxes in a scrollable container on the new user registration page.
-3. Screenshot of the admin settings menu and options.
+3. Screenshot of the plugin showing groups as a list of radio buttons on the new user registration page.
+4. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+
+= 1.1.2 =
+* Maintenance release. Tested plugin as functional with the recent BuddyPress 2.4.3 update. Safe to upgrade.
+* Updated screenshots.
+* Updated plugin description text.
 
 = 1.1.1 =
 * Added an option to display groups as radio buttons
@@ -131,6 +144,9 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 * First version!
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+* Maintenance release. Tested plugin as functional with the recent BuddyPress 2.4.3 update. Safe to upgrade.
 
 = 1.1.1 =
 * Added an option to display groups as radio buttons. Safe to upgrade.

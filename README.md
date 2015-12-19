@@ -6,20 +6,27 @@ Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 
-Tested up to: WordPress 4.4 / BuddyPress 2.4.2
+Tested up to: WordPress 4.4 / BuddyPress 2.4.3
 
 License: GNU/GPL 2
 
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
 Description
 -----------
-This plugin is built to display BuddyPress groups on the new user registration page in a list where the user can
-select, via checkbox, which groups they would like to join upon account activation. Options are available in the
-admin area to configure the text shown on the registration page, the types of groups shown (public or public AND
-private), the order in which groups are displayed, and how many groups will be displayed.
+This plugin is built to display BuddyPress groups on the new user registration page. Groups can be displayed as:
+
+* a list of checkboxes
+* a list of checkboxes in a scrollable container
+* a list of radio buttons
+
+New users will automatically join any of the groups selected during the registration process.
+
+Options are available in the admin area to configure the title of the groups list on the registration page, the
+description of the groups list, whether private groups are visible to new users, the order in which groups are
+displayed, and how many groups will be visible.
 
 Installation
 ------------
@@ -40,10 +47,15 @@ Yes! You can toggle private group visibility on and off in the admin section
 No, it does not. The BuddyPress core makes it a bit difficult to easily get these groups without being a logged in user. This might change in the future. If it does, hidden groups will be supported.
 
 ###What if the plugin doesn't work?
-Hit me up on [my website](http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
+Use the WordPress plugin [support form here](http://wordpress.org/support/plugin/buddypress-registration-groups-1) or hit me up on [my website](http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
 
 Changelog
 ---------
+###1.1.2
+* Maintenance release. Tested plugin as functional with the recent BuddyPress 2.4.3 update. Safe to upgrade.
+* Updated screenshots.
+* Updated plugin description text.
+
 ###1.1.1
 * Added an option to display groups as radio buttons
 
