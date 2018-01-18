@@ -186,7 +186,6 @@ class BPRegistrationGroupsSettingsPage
         $this->options = get_option( 'bp_registration_groups_option_handle' );
         ?>
         <div class="wrap">
-            <?php screen_icon(); ?>
             <h2>BP Registration Groups</h2>
             <form method="post" action="options.php">
             <?php
