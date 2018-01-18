@@ -51,35 +51,35 @@ Use the WordPress plugin [support form here](http://wordpress.org/support/plugin
 
 Changelog
 ---------
-###1.1.3
+### 1.1.3
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
 * Removed a deprecated call to screen_icon() in the admin settings
 
-###1.1.2
+### 1.1.2
 * Maintenance release. Tested plugin as functional with the recent BuddyPress 2.4.3 update. Safe to upgrade.
 * Updated screenshots.
 * Updated plugin description text.
 
-###1.1.1
+### 1.1.1
 * Added an option to display groups as radio buttons
 
-###1.1.0
+### 1.1.0
 * Tested plugin as functional with WordPress 4.4 and BuddyPress 2.4.2
 * Fixed a bug where list bullets would show up in some themes
 * Added the ability to switch between a list of checkboxes and a list of checkboxes in a scrollable container
 
-###1.0.3
+### 1.0.3
 * Tested plugin as functional with WordPress 4.2.2 and BuddyPress 2.3.1
 
-###1.0.2
+### 1.0.2
 * Tested plugin as functional with WordPress 4.1.1 and BuddyPress 2.2.2.1
 * Addressed an issue with labels appearing below their checkboxes caused by a change to the BuddyPress core CSS
 * Added reg_groups_group_checkbox and reg_groups_group_label CSS classes to their respective form elements for easier targeting
 
-###1.0.1
+### 1.0.1
 * Tested plugin as functional with WordPress 3.8 and BuddyPress 1.9
 
-###1.0
+### 1.0
 * Prepared echoed and printed text for localization
 * Added semantic <label> markup to the checkbox list
 * Changed the "bp_has_groups()" per_page option to use "groups_get_total_group_count()" instead of a static number
@@ -90,7 +90,7 @@ Changelog
 * Added the ability to toggle the display of private groups
 * Added the ability to specify the number of groups to display
 
-###0.9
+### 0.9
 * Removed all trailing "?>" tags from .php files
 * Beefed up the loader a bit
 * Enqueued styles correctly
@@ -100,31 +100,31 @@ Changelog
 * Replaced deprecated function "get_usermeta" with "get_user_meta"
 * Added a short FAQ
 
-###0.8
+### 0.8
 * Validated plugin is compatible with BuddyPress 1.5
 * Modified plugin listing to remove 20 group limit; limit is now 99999
 
-###0.7
+### 0.7
 * Validated plugin is compatible with WordPress 3.2.1 and BuddyPress 1.2.9
 * Changed default group listing to only show public groups, hidden and private groups are not shown
 
-###0.6
+### 0.6
 * Fixed a bug where the timeline would not record group names correctly on join
 * There is a known issue with user avatars not displaying in the timeline when joining on registration, plugin works fine otherwise
 
-###0.5
+### 0.5
 * Changed group ordering on the registration page to alphabetical
 
-###0.4
+### 0.4
 * Replaced static link to plugin .css file with a dynamic one
 * Addressed minor styling issue
 * Addressed error that was being thrown if no groups were selected
 
-###0.3
+### 0.3
 * Tested as functional on WordPress 3.0 and BuddyPress 1.2.5.2
 * Tested as functional in both WP3 single and multisite installations
 
-###0.2
+### 0.2
 * Updated plugin to work in single and multiuser environments
 * Tested as functional on WordPress 2.9.2 and BuddyPress 1.2.5.2
 * Tested as functional on WordPress MU 2.9.2 and BuddyPress 1.2.5.2
@@ -135,5 +135,5 @@ Changelog
 * Added plugin specific CSS file to includes directory
 * Added code to only load CSS on the registration page
 
-###0.1
+### 0.1
 * First version!
