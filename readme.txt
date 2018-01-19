@@ -60,6 +60,12 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 
 == Changelog ==
 
+= 1.2.0 =
+* New minor version!
+* BP Registration Groups has been internationalized and can now be translated into other languages!
+* Anyone can help translate this plugin by suggesting new translations [here](https://translate.wordpress.org/projects/wp-plugins/buddypress-registration-groups-1).
+* You can find more information about [WordPress internationalization here](https://codex.wordpress.org/I18n_for_WordPress_Developers).
+
 = 1.1.3 =
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
 * Removed a deprecated call to screen_icon() in the admin settings
@@ -148,6 +154,9 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 * First version!
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+* New minor version! Includes internationalization. No changes to core functionality. Safe to upgrade.
 
 = 1.1.3 =
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
