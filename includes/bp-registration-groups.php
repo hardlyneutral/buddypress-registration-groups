@@ -66,7 +66,12 @@ function bp_registration_groups(){
 				<?php $i++; ?>
 				<?php endwhile; /* endif; */ ?>
 				<?php else: ?>
-				<p class="reg_groups_none"><?php _e( 'No groups are available at this time.', 'buddypress-registration-groups-1' ); ?></p>
+				<p class="reg_groups_none">
+					<?php
+					/* translators: text that is displayed on the buddypress user registration form when there are no groups that can be displayed */
+					_e( 'No groups are available at this time.', 'buddypress-registration-groups-1' );
+					?>
+				</p>
 				<?php endif; ?>
 			</ul>
 		</div>
@@ -146,306 +151,277 @@ function bp_registration_groups_join_s( $user_id ) {
  */
 class BPRegistrationGroupsSettingsPage
 {
-    /**
-     * Holds the values to be used in the fields callbacks
-     */
-    private $options;
+  /**
+   * Holds the values to be used in the fields callbacks
+   */
+  private $options;
 
-    /**
-     * Start up
-     */
-    public function __construct()
-    {
-        add_action( 'admin_menu', array( $this, 'bp_registration_groups_add_plugin_page' ) );
-        add_action( 'admin_init', array( $this, 'bp_registration_groups_page_init' ) );
-    }
+  /**
+   * Start up
+   */
+  public function __construct()
+  {
+    add_action( 'admin_menu', array( $this, 'bp_registration_groups_add_plugin_page' ) );
+    add_action( 'admin_init', array( $this, 'bp_registration_groups_page_init' ) );
+  }
 
-    /**
-     * Add options page
-     */
-    public function bp_registration_groups_add_plugin_page()
-    {
-        // This page will be under "Settings"
-        add_options_page(
-            __('BP Registration Groups Settings', 'buddypress-registration-groups-1'),
-            __('BP Registration Groups', 'buddypress-registration-groups-1'),
-            'manage_options',
-            'bp-registration-groups-settings-admin',
-            array( $this, 'bp_registration_groups_create_admin_page' )
-        );
-    }
+  /**
+   * Add options page
+   */
+  public function bp_registration_groups_add_plugin_page()
+  {
+    // This page will be under "Settings"
+    add_options_page(
+			/* translators: the text to be displayed in the title tags of the page when the menu is selected */
+			__('BP Registration Groups Settings', 'buddypress-registration-groups-1'),
+			/* translators: the text to be used for the menu */
+			__('BP Registration Groups', 'buddypress-registration-groups-1'),
+      'manage_options',
+      'bp-registration-groups-settings-admin',
+      array( $this, 'bp_registration_groups_create_admin_page' )
+    );
+  }
 
-    /**
-     * Options page callback
-     */
-    public function bp_registration_groups_create_admin_page()
-    {
-        // Set class property
-        $this->options = get_option( 'bp_registration_groups_option_handle' );
-        ?>
-        <div class="wrap">
-            <h2><?php _e('BP Registration Groups', 'buddypress-registration-groups-1'); ?></h2>
-            <form method="post" action="options.php">
-            <?php
-                // This prints out all hidden setting fields
-                settings_fields( 'bp_registration_groups_option_group' );
-                do_settings_sections( 'bp-registration-groups-settings-admin' );
-                submit_button();
-            ?>
-            </form>
-        </div>
-        <?php
-    }
+  /**
+   * Options page callback
+   */
+  public function bp_registration_groups_create_admin_page()
+  {
+		// Set class property
+    $this->options = get_option( 'bp_registration_groups_option_handle' );
+    ?>
+    <div class="wrap">
+      <h2><?php _e('BP Registration Groups', 'buddypress-registration-groups-1'); ?></h2>
+      <form method="post" action="options.php">
+      <?php
+        // This prints out all hidden setting fields
+        settings_fields( 'bp_registration_groups_option_group' );
+        do_settings_sections( 'bp-registration-groups-settings-admin' );
+        submit_button();
+      ?>
+      </form>
+    </div>
+    <?php
+  }
 
-    /**
-     * Register and add settings
-     */
-    public function bp_registration_groups_page_init()
-    {
-        register_setting(
-            'bp_registration_groups_option_group', // Option group
-            'bp_registration_groups_option_handle', // Option name
-            array( $this, 'sanitize' ) // Sanitize
-        );
+  /**
+   * Register and add settings
+   */
+  public function bp_registration_groups_page_init()
+  {
+    register_setting(
+      'bp_registration_groups_option_group', // Option group
+      'bp_registration_groups_option_handle', // Option name
+      array( $this, 'sanitize' ) // Sanitize
+    );
 
-        add_settings_section(
-            'bp_registration_groups_display_options_section_id', // ID
-            __('Display Options', 'buddypress-registration-groups-1'), // Title
-            array( $this, 'print_display_options_section_info' ), // Callback
-            'bp-registration-groups-settings-admin' // Page
-        );
+    add_settings_section(
+      'bp_registration_groups_display_options_section_id',
+			/* translators: displays the page title for the plugin admin page */
+			__('Display Options', 'buddypress-registration-groups-1'),
+      array( $this, 'print_display_options_section_info' ),
+      'bp-registration-groups-settings-admin'
+    );
 
-        add_settings_field(
-            'bp_registration_groups_title', // ID
-            __('Title', 'buddypress-registration-groups-1'), // Title
-            array( $this, 'bp_registration_groups_title_callback' ), // Callback
-            'bp-registration-groups-settings-admin', // Page
-            'bp_registration_groups_display_options_section_id' // Section
-        );
+    add_settings_field(
+      'bp_registration_groups_title',
+			/* translators: displays the title text for the "Title" section of the plugin admin page */
+			__('Title', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_title_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
 
-        add_settings_field(
-            'bp_registration_groups_description',
-            __('Description', 'buddypress-registration-groups-1'),
-            array( $this, 'bp_registration_groups_description_callback' ),
-            'bp-registration-groups-settings-admin',
-            'bp_registration_groups_display_options_section_id'
-        );
+    add_settings_field(
+      'bp_registration_groups_description',
+			/* translators: displays the title text for the "Description" section of the plugin admin page */
+			__('Description', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_description_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
 
-        add_settings_field(
-            'bp_registration_groups_display_order',
-            __('Display Order', 'buddypress-registration-groups-1'),
-            array( $this, 'bp_registration_groups_display_order_callback' ),
-            'bp-registration-groups-settings-admin',
-            'bp_registration_groups_display_options_section_id'
-        );
+    add_settings_field(
+      'bp_registration_groups_display_order',
+			/* translators: displays the title text for the "Display Order" section of the plugin admin page */
+			__('Display Order', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_display_order_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
 
-				add_settings_field(
-						'bp_registration_groups_display_as',
-						__('Display As', 'buddypress-registration-groups-1'),
-						array( $this, 'bp_registration_groups_display_as_callback' ),
-						'bp-registration-groups-settings-admin',
-						'bp_registration_groups_display_options_section_id'
-				);
+		add_settings_field(
+			'bp_registration_groups_display_as',
+			/* translators: displays the title text for the "Display As" section of the plugin admin page */
+			__('Display As', 'buddypress-registration-groups-1'),
+			array( $this, 'bp_registration_groups_display_as_callback' ),
+			'bp-registration-groups-settings-admin',
+			'bp_registration_groups_display_options_section_id'
+		);
 
-        add_settings_field(
-            'bp_registration_groups_show_private_groups',
-            __('Show Private Groups', 'buddypress-registration-groups-1'),
-            array( $this, 'bp_registration_groups_show_private_groups_callback' ),
-            'bp-registration-groups-settings-admin',
-            'bp_registration_groups_display_options_section_id'
-        );
+    add_settings_field(
+      'bp_registration_groups_show_private_groups',
+			/* translators: displays the title text for the "Show Private Groups" section of the plugin admin page */
+			__('Show Private Groups', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_show_private_groups_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
 
-        add_settings_field(
-            'bp_registration_groups_number_displayed',
-            __('Number of Groups to Display', 'buddypress-registration-groups-1'),
-            array( $this, 'bp_registration_groups_number_displayed_callback' ),
-            'bp-registration-groups-settings-admin',
-            'bp_registration_groups_display_options_section_id'
-        );
-    }
+    add_settings_field(
+      'bp_registration_groups_number_displayed',
+			/* translators: displays the title text for the "Number of Groups to Display" section of the plugin admin page */
+			__('Number of Groups to Display', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_number_displayed_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
+  }
 
-    /**
-     * Sanitize each setting field as needed
-     *
-     * @param array $input Contains all settings fields as array keys
-     */
-    public function sanitize( $input )
-    {
-        $new_input = array();
-        if( isset( $input['bp_registration_groups_title'] ) )
-            $new_input['bp_registration_groups_title'] = sanitize_text_field( $input['bp_registration_groups_title'] );
+  /**
+   * Sanitize each setting field as needed
+   *
+   * @param array $input Contains all settings fields as array keys
+   */
+  public function sanitize( $input )
+  {
+    $new_input = array();
+    if( isset( $input['bp_registration_groups_title'] ) )
+        $new_input['bp_registration_groups_title'] = sanitize_text_field( $input['bp_registration_groups_title'] );
 
-        if( isset( $input['bp_registration_groups_description'] ) )
-            $new_input['bp_registration_groups_description'] = sanitize_text_field( $input['bp_registration_groups_description'] );
+    if( isset( $input['bp_registration_groups_description'] ) )
+        $new_input['bp_registration_groups_description'] = sanitize_text_field( $input['bp_registration_groups_description'] );
 
-        if( isset( $input['bp_registration_groups_display_order'] ) )
-            $new_input['bp_registration_groups_display_order'] = sanitize_text_field( $input['bp_registration_groups_display_order'] );
+    if( isset( $input['bp_registration_groups_display_order'] ) )
+        $new_input['bp_registration_groups_display_order'] = sanitize_text_field( $input['bp_registration_groups_display_order'] );
 
-				if( isset( $input['bp_registration_groups_display_as'] ) )
-            $new_input['bp_registration_groups_display_as'] = absint( $input['bp_registration_groups_display_as'] );
+		if( isset( $input['bp_registration_groups_display_as'] ) )
+        $new_input['bp_registration_groups_display_as'] = absint( $input['bp_registration_groups_display_as'] );
 
-        if( isset( $input['bp_registration_groups_show_private_groups'] ) )
-            $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
+    if( isset( $input['bp_registration_groups_show_private_groups'] ) )
+        $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
 
-        if( isset( $input['bp_registration_groups_number_displayed'] ) )
-            $new_input['bp_registration_groups_number_displayed'] = absint( $input['bp_registration_groups_number_displayed'] );
+    if( isset( $input['bp_registration_groups_number_displayed'] ) )
+        $new_input['bp_registration_groups_number_displayed'] = absint( $input['bp_registration_groups_number_displayed'] );
 
-        return $new_input;
-    }
+    return $new_input;
+  }
 
-    /**
-     * Print the Section text
-     */
-    public function print_display_options_section_info()
-    {
-        _e( 'These options allow you to customize the list of groups on the new user registration form.', 'buddypress-registration-groups-1' );
-    }
+  /**
+   * Print the Section text
+   */
+  public function print_display_options_section_info()
+  {
+		/* translators: displays the help text for the "Display Options" section of the plugin admin page */
+		_e( 'These options allow you to customize the list of groups on the new user registration form.', 'buddypress-registration-groups-1' );
+  }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
-    public function bp_registration_groups_title_callback()
-    {
-        printf(
-            '<input type="text" id="bp_registration_groups_title" name="bp_registration_groups_option_handle[bp_registration_groups_title]" value="%s" />',
-            isset( $this->options['bp_registration_groups_title'] ) ? esc_attr_x( $this->options['bp_registration_groups_title'], 'change the word groups to another word', 'buddypress-registration-groups-1' ) : ''
-        );
-				echo '<br /><em>' . __('Default: Groups', 'buddypress-registration-groups-1') . '</em>';
-    }
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_title_callback()
+  {
+		printf( '<input type="text" id="bp_registration_groups_title" name="bp_registration_groups_option_handle[bp_registration_groups_title]" value="%s" />', isset( $this->options['bp_registration_groups_title'] ) ? esc_attr( $this->options['bp_registration_groups_title'] ) : '' );
 
-    /**
-     * Get the settings option array and print one of its values
-     */
-    public function bp_registration_groups_description_callback()
-    {
-        printf(
-            '<input type="text" id="bp_registration_groups_description" name="bp_registration_groups_option_handle[bp_registration_groups_description]" value="%s" />',
-            isset( $this->options['bp_registration_groups_description'] ) ? esc_attr_x( $this->options['bp_registration_groups_description'], 'adds a description before the list of groups', 'buddypress-registration-groups-1' ) : ''
-        );
-				echo '<br /><em>' . __('Default: Check one or more areas of interest', 'buddypress-registration-groups-1') . '</em>';
-    }
+		/* translators: displays the help text for the "Title" section of the plugin admin page */
+		echo '<br /><em>' . __('Default: Groups', 'buddypress-registration-groups-1') . '</em>';
+  }
 
-    /**
-     * Get the settings option array and print one of its values
-     *
-     * Options are the same as bp_has_groups: active, newest, popular, random, alphabetical, most-forum-topics, most-forum-posts
-     */
-    public function bp_registration_groups_display_order_callback()
-    {
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="alphabetical"> %s',
-				!isset($this->options['bp_registration_groups_display_order']) || ( isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'alphabetical' ) ? 'checked="checked"' : '',
-				__('Alphabetical (default)', 'buddypress-registration-groups-1')
-    	);
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_description_callback()
+  {
+		printf( '<input type="text" id="bp_registration_groups_description" name="bp_registration_groups_option_handle[bp_registration_groups_description]" value="%s" />', isset( $this->options['bp_registration_groups_description'] ) ? esc_attr( $this->options['bp_registration_groups_description'] ) : '' );
 
-    	echo '<br />';
+		/* translators: displays the help text for the "Description" section of the plugin admin page */
+		echo '<br /><em>' . __('Default: Check one or more areas of interest', 'buddypress-registration-groups-1') . '</em>';
+  }
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="active"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'active' ? 'checked="checked"' : '',
-				__('Active', 'buddypress-registration-groups-1')
-    	);
+  /**
+   * Get the settings option array and print one of its values
+   *
+   * Options are the same as bp_has_groups: active, newest, popular, random, alphabetical, most-forum-topics, most-forum-posts
+   */
+  public function bp_registration_groups_display_order_callback()
+  {
+		/* translators: displays the text "Alphabetical (default)" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="alphabetical"> %s', !isset($this->options['bp_registration_groups_display_order']) || ( isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'alphabetical' ) ? 'checked="checked"' : '', __('Alphabetical (default)', 'buddypress-registration-groups-1') );
 
-    	echo '<br />';
+  	echo '<br />';
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="newest"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'newest' ? 'checked="checked"' : '',
-				__('Newest', 'buddypress-registration-groups-1')
-    	);
+		/* translators: displays the text "Active" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="active"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'active' ? 'checked="checked"' : '', __('Active', 'buddypress-registration-groups-1') );
 
-    	echo '<br />';
+  	echo '<br />';
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="popular"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'popular' ? 'checked="checked"' : '',
-				__('Popular', 'buddypress-registration-groups-1')
-    	);
+		/* translators: displays the text "Newest" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="newest"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'newest' ? 'checked="checked"' : '', __('Newest', 'buddypress-registration-groups-1') );
 
-    	echo '<br />';
+  	echo '<br />';
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="random"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'random' ? 'checked="checked"' : '',
-				__('Random', 'buddypress-registration-groups-1')
-    	);
+		/* translators: displays the text "Popular" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="popular"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'popular' ? 'checked="checked"' : '', __('Popular', 'buddypress-registration-groups-1') );
 
-    	echo '<br />';
+  	echo '<br />';
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="most-forum-topics"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'most-forum-topics' ? 'checked="checked"' : '',
-				__('Most Forum Topics', 'buddypress-registration-groups-1')
-    	);
+		/* translators: displays the text "Random" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="random"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'random' ? 'checked="checked"' : '', __('Random', 'buddypress-registration-groups-1') );
 
-    	echo '<br />';
+  	echo '<br />';
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="most-forum-posts"> %s',
-				isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'most-forum-posts' ? 'checked="checked"' : '',
-				__('Most Forum Posts', 'buddypress-registration-groups-1')
-    	);
-    }
+		/* translators: displays the text "Most Forum Topics" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="most-forum-topics"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'most-forum-topics' ? 'checked="checked"' : '', __('Most Forum Topics', 'buddypress-registration-groups-1') );
 
-		/**
-     * Get the settings option array and print one of its values
-     */
-    public function bp_registration_groups_display_as_callback()
-    {
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> %s',
-				!isset($this->options['bp_registration_groups_display_as_checkboxes']) || isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '2' ? 'checked="checked"' : '',
-				__('Checkboxes Multiselect (default)', 'buddypress-registration-groups-1')
-    	);
+  	echo '<br />';
 
-    	echo '<br />';
+		/* translators: displays the text "Most Forum Posts" in the "Display Order" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_order]" value="most-forum-posts"> %s', isset($this->options['bp_registration_groups_display_order']) && $this->options['bp_registration_groups_display_order'] == 'most-forum-posts' ? 'checked="checked"' : '', __('Most Forum Posts', 'buddypress-registration-groups-1') );
+  }
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="1"> %s',
-				isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '1' ? 'checked="checked"' : '',
-				__('Checkboxes', 'buddypress-registration-groups-1')
-    	);
+	/**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_display_as_callback()
+  {
+		/* translators: displays the text "Checkboxes Multiselect (default)" in the "Display As" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="2"> %s', !isset($this->options['bp_registration_groups_display_as_checkboxes']) || isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '2' ? 'checked="checked"' : '', __('Checkboxes Multiselect (default)', 'buddypress-registration-groups-1') );
 
-			echo '<br />';
+  	echo '<br />';
 
-			printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="3"> %s',
-				isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '3' ? 'checked="checked"' : '',
-				__('Radio Buttons', 'buddypress-registration-groups-1')
-			);
-    }
+		/* translators: displays the text "Checkboxes" in the "Display As" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="1"> %s', isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '1' ? 'checked="checked"' : '', __('Checkboxes', 'buddypress-registration-groups-1') );
 
-    /**
-     * Get the settings option array and print one of its values
-     */
-    public function bp_registration_groups_show_private_groups_callback()
-    {
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_show_private_groups]" value="1"> %s',
-				isset($this->options['bp_registration_groups_show_private_groups']) && $this->options['bp_registration_groups_show_private_groups'] == '1' ? 'checked="checked"' : '',
-				__('Yes', 'buddypress-registration-groups-1')
-    	);
+		echo '<br />';
 
-    	echo '<br />';
+		/* translators: displays the text "Radio Buttons" in the "Display As" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_display_as]" value="3"> %s', isset($this->options['bp_registration_groups_display_as']) && $this->options['bp_registration_groups_display_as'] == '3' ? 'checked="checked"' : '', __('Radio Buttons', 'buddypress-registration-groups-1') );
+  }
 
-    	printf(
-				'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_show_private_groups]" value="0"> %s',
-				!isset($this->options['bp_registration_groups_show_private_groups']) || ( isset($this->options['bp_registration_groups_show_private_groups']) && $this->options['bp_registration_groups_show_private_groups'] != '1' ) ? 'checked="checked"' : '',
-				__('No (default)', 'buddypress-registration-groups-1')
-    	);
-    }
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_show_private_groups_callback()
+  {
+		/* translators: displays the text "Yes" in the "Show Private Groups" section of the plugin admin page */
+		printf( '<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_show_private_groups]" value="1"> %s', isset($this->options['bp_registration_groups_show_private_groups']) && $this->options['bp_registration_groups_show_private_groups'] == '1' ? 'checked="checked"' : '', __('Yes', 'buddypress-registration-groups-1') );
 
-    /**
-     * Get the settings option array and print one of its values
-     */
-    public function bp_registration_groups_number_displayed_callback()
-    {
-        printf(
-            '<input type="text" id="bp_registration_groups_number_displayed" name="bp_registration_groups_option_handle[bp_registration_groups_number_displayed]" value="%d" />',
-            isset( $this->options['bp_registration_groups_number_displayed'] ) ? esc_attr_x( $this->options['bp_registration_groups_number_displayed'], 'number of groups to display', 'buddypress-registration-groups-1' ) : ''
-        );
-				echo '<br /><em>' . __('Default: 0 (show all groups)', 'buddypress-registration-groups-1') . '</em>';
-    }
+  	echo '<br />';
+
+		/* translators: displays the text "No (default)" in the "Show Private Groups" section of the plugin admin page */
+		printf(	'<input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_show_private_groups]" value="0"> %s', !isset($this->options['bp_registration_groups_show_private_groups']) || ( isset($this->options['bp_registration_groups_show_private_groups']) && $this->options['bp_registration_groups_show_private_groups'] != '1' ) ? 'checked="checked"' : '', __('No (default)', 'buddypress-registration-groups-1') );
+  }
+
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_number_displayed_callback()
+  {
+		printf( '<input type="text" id="bp_registration_groups_number_displayed" name="bp_registration_groups_option_handle[bp_registration_groups_number_displayed]" value="%d" />', isset( $this->options['bp_registration_groups_number_displayed'] ) ? esc_attr( $this->options['bp_registration_groups_number_displayed'] ) : '' );
+
+		/* translators: displays the help text for the "Number of Groups to Display" section of the plugin admin page */
+		echo '<br /><em>' . __('Default: 0 (show all groups)', 'buddypress-registration-groups-1') . '</em>';
+  }
 }
 
 if( is_admin() )
