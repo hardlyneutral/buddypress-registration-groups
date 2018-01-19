@@ -4,7 +4,7 @@
 Plugin Name: BuddyPress Registration Groups
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
 Description: Allows a new BuddyPress user to select groups to join during the registration process.
-Version: 1.1.3
+Version: 1.2.0
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
@@ -18,7 +18,7 @@ Text Domain: buddypress-registration-groups-1
 define( 'BP_REGISTRATION_GROUPS_IS_INSTALLED', 1 );
 
 // Define a constant that will hold the current version number of the component
-define( 'BP_REGISTRATION_GROUPS_VERSION', '1.1.3' );
+define( 'BP_REGISTRATION_GROUPS_VERSION', '1.2.0' );
 
 // Define a constant that we can use to construct file paths throughout the component
 define( 'BP_REGISTRATION_GROUPS_PLUGIN_DIR', dirname( __FILE__ ) );
@@ -29,7 +29,12 @@ define( 'BP_REGISTRATION_GROUPS_DB_VERSION', '1' );
 // Only load the component if BuddyPress is loaded and initialized.
 function bp_registration_groups_init() {
 	// Because our loader file uses BP_Component, it requires BP 1.5 or greater.
-	if ( version_compare( BP_VERSION, '1.3', '>' ) )
+	if ( version_compare( BP_VERSION, '1.3', '>' ) ) {
 		require( dirname( __FILE__ ) . '/includes/bp-registration-groups.php' );
+
+		// Load text domain
+		$plugin_rel_path = basename( dirname( __FILE__ ) ) . '/languages';
+		load_plugin_textdomain( 'buddypress-registration-groups-1', false, $plugin_rel_path );
+	}
 }
 add_action( 'bp_include', 'bp_registration_groups_init' );

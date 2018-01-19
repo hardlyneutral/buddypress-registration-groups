@@ -1,6 +1,6 @@
 === BuddyPress Registration Groups ===
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.1.3
+Version: 1.2.0
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
@@ -50,7 +50,7 @@ No, it does not. The BuddyPress core makes it a bit difficult to easily get thes
 
 = What if the plugin doesn't work? =
 
-Hit me up on my website (http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
+Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
 
 == Screenshots ==
 1. Screenshot of the plugin showing groups as a list of checkboxes on the new user registration page.
