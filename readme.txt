@@ -9,7 +9,7 @@ Author: Eric Johnson
 Author URI: http://hardlyneutral.com/
 Contributors: hardlyneutral
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TYJT5VMV8YMVQ
-Stable tag: trunk
+Stable tag: Release_1.2.0
 
 Allows a new BuddyPress user to select groups to join during the registration process.
 
