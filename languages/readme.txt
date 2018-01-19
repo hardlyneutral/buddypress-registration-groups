@@ -4,7 +4,7 @@
 
 Anyone can help by suggesting new translations [here](https://translate.wordpress.org/projects/wp-plugins/buddypress-registration-groups-1).
 
-Once you've suggested a new translation, a GlotPress validator will review it. They will then approve, reject, or change your suggestions. Once your changes get approved, they are automatically shipped to all BP Registration Groups users using WordPress in your language.
+Once you've suggested a new translation, a GlotPress validator will review it. They will then approve, reject, or change your suggestions. Once your changes get approved, they are automatically included in the next BP Registration Groups release.
 
 == How does GlotPress work? ==
 
