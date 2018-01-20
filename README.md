@@ -10,7 +10,7 @@ Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
 
 License: GNU/GPL 2
 
-Stable tag: 1.1.3
+Stable tag: 1.2.0
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -47,10 +47,16 @@ Yes! You can toggle private group visibility on and off in the admin section
 No, it does not. The BuddyPress core makes it a bit difficult to easily get these groups without being a logged in user. This might change in the future. If it does, hidden groups will be supported.
 
 ###What if the plugin doesn't work?
-Use the WordPress plugin [support form here](http://wordpress.org/support/plugin/buddypress-registration-groups-1) or hit me up on [my website](http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
+Use the WordPress plugin [support form here](http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
 
 Changelog
 ---------
+### 1.2.0
+* New minor version!
+* BP Registration Groups has been internationalized and can now be translated into other languages!
+* Anyone can help translate this plugin by suggesting new translations [here](https://translate.wordpress.org/projects/wp-plugins/buddypress-registration-groups-1).
+* You can find more information about [WordPress internationalization here](https://codex.wordpress.org/I18n_for_WordPress_Developers).
+
 ### 1.1.3
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
 * Removed a deprecated call to screen_icon() in the admin settings

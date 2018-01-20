@@ -1,6 +1,6 @@
 === BuddyPress Registration Groups ===
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.1.3
+Version: 1.2.0
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
 Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
@@ -9,7 +9,7 @@ Author: Eric Johnson
 Author URI: http://hardlyneutral.com/
 Contributors: hardlyneutral
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TYJT5VMV8YMVQ
-Stable tag: trunk
+Stable tag: Release_1.2.0
 
 Allows a new BuddyPress user to select groups to join during the registration process.
 
@@ -50,7 +50,7 @@ No, it does not. The BuddyPress core makes it a bit difficult to easily get thes
 
 = What if the plugin doesn't work? =
 
-Hit me up on my website (http://hardlyneutral.com) and let me know. I only do this in my spare time, so don't expect a super quick response :)
+Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
 
 == Screenshots ==
 1. Screenshot of the plugin showing groups as a list of checkboxes on the new user registration page.
@@ -59,6 +59,12 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 4. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+
+= 1.2.0 =
+* New minor version!
+* BP Registration Groups has been internationalized and can now be translated into other languages!
+* Anyone can help translate this plugin by suggesting new translations [here](https://translate.wordpress.org/projects/wp-plugins/buddypress-registration-groups-1).
+* You can find more information about [WordPress internationalization here](https://codex.wordpress.org/I18n_for_WordPress_Developers).
 
 = 1.1.3 =
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
@@ -148,6 +154,9 @@ Hit me up on my website (http://hardlyneutral.com) and let me know. I only do th
 * First version!
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+* New minor version! Includes internationalization. No changes to core functionality. Safe to upgrade.
 
 = 1.1.3 =
 * Maintenance release. Tested plugin as functional with both WordPress 4.9.2 and BuddyPress 2.9.2. Safe to upgrade.
