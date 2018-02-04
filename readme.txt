@@ -224,6 +224,9 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 
 == Upgrade Notice ==
 
+= 1.2.1 =
+* Maintenance update. No changes to core functionality. Safe to upgrade.
+
 = 1.2.0 =
 * New minor version! Includes internationalization. No changes to core functionality. Safe to upgrade.
 
