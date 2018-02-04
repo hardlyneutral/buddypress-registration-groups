@@ -4,13 +4,13 @@ Contributors: @hardlyneutral
 
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
 
-Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
+Requires at least: WordPress 3.7.1
 
-Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
+Tested up to: WordPress 4.9.2
 
 License: GNU/GPL 2
 
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -117,6 +117,11 @@ Use the WordPress plugin [support form here](http://wordpress.org/support/plugin
 
 Changelog
 ---------
+### 1.2.1
+* Maintenance update.
+* Added CSS documentation to the readme.
+* Removed the minimum BuddyPress version number to address version management in the WordPress plugins repository.
+
 ### 1.2.0
 * New minor version!
 * BP Registration Groups has been internationalized and can now be translated into other languages!
