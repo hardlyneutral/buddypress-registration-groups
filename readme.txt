@@ -124,6 +124,10 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 4. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+= 1.2.1 =
+* Maintenance update.
+* Added CSS documentation to the readme.
+* Removed the minimum BuddyPress version number to address version management in the WordPress plugins repository.
 
 = 1.2.0 =
 * New minor version!
