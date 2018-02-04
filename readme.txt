@@ -2,8 +2,8 @@
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
 Version: 1.2.1
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
-Requires at least: WordPress 3.7.1 / BuddyPress 1.8.1
-Tested up to: WordPress 4.9.2 / BuddyPress 2.9.2
+Requires at least: WordPress 3.7.1
+Tested up to: WordPress 4.9.2
 License: GNU/GPL 2
 Author: Eric Johnson
 Author URI: http://hardlyneutral.com/
