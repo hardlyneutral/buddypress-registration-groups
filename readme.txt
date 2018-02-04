@@ -38,6 +38,71 @@ If you would like to install manually:
 2. Upload the extracted directory and all its contents to the '/wp-content/plugins/' directory
 3. Activate the plugin through the 'Plugins' menu in WordPress
 
+== Custom Styles ==
+This plugin includes specific CSS for changing the way content is displayed. The default CSS will place the group after the "Profile Details" section and before the "Complete Sign Up" button on the register page. You can view `includes/styles.css` in this plugin directory to see how to target each element.
+
+Here is a list of the current selectors used in `includes/styles.css`.
+
+**Groups section:**
+`
+#registration-groups-section {
+	float: right;
+	width: 48%;
+}
+`
+
+**Checkboxes:**
+`
+.reg_groups_group_checkbox {
+	margin: 0 5px 0 0;
+}
+`
+
+**Form labels:**
+`
+#buddypress .standard-form label.reg_groups_group_label,
+.reg_groups_group_label {
+	display: inline;
+	font-weight: normal;
+}
+`
+
+**Groups section - responsive:**
+`
+@media only screen and (max-width: 480px) {
+	#registration-groups-section {
+		float: none;
+		width: 100%;
+	}
+}
+`
+
+**List items:**
+`
+.reg_groups_item {
+	list-style: none;
+}
+`
+
+**No groups message:**
+`
+.reg_groups_none {
+	font-style: italic;
+	color: gray;
+}
+`
+
+**Multiselect:**
+`
+.reg_groups_list_multiselect {
+    height: 8em;
+		border: 1px solid #ccc;
+		background: #fafafa;
+		padding: 6px;
+    overflow: auto;
+}
+`
+
 == Frequently Asked Questions ==
 
 = Does this plugin show Private groups? =
