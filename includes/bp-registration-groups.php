@@ -1,5 +1,10 @@
 <?php
 
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
 * Enqueue plugin scripts and styles
 */
@@ -14,7 +19,7 @@ if (is_multisite()) { add_filter( 'bp_signup_usermeta', 'bp_registration_groups_
 else { add_action( 'bp_core_signup_user', 'bp_registration_groups_save_s' ); }
 
 if (is_multisite()) { add_action( 'bp_core_activated_user', 'bp_registration_groups_join', 10, 3 ); }
-else { add_action( 'bp_core_activated_user', 'bp_registration_groups_join_s' ); }
+else { add_action( 'bp_core_activated_user', 'bp_registration_groups_join_s', 10, 3 ); }
 
 /**
 * bp_registration_groups
@@ -25,14 +30,17 @@ else { add_action( 'bp_core_activated_user', 'bp_registration_groups_join_s' ); 
 add_action('bp_after_signup_profile_fields', 'bp_registration_groups');
 function bp_registration_groups(){
 
+	// Add nonce for security
+	wp_nonce_field( 'bp_registration_groups_nonce', '_bp_registration_groups_nonce' );
+
 	// get the BP Registration Groups options array from the WP options table
 	$bp_registration_groups_options = get_option('bp_registration_groups_option_handle');
 
 	// set $bp_registration_groups_title to the stored value; fall back to 'Groups' if no value is stored
-	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && $bp_registration_groups_options['bp_registration_groups_title'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_title'] : 'Groups';
+	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && $bp_registration_groups_options['bp_registration_groups_title'] != NULL ) ? sanitize_text_field( $bp_registration_groups_options['bp_registration_groups_title'] ) : 'Groups';
 
 	// set $bp_registration_groups_description to the stored value; fall back to 'Check one or more areas of interest' if no value is stored
-	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && $bp_registration_groups_options['bp_registration_groups_description'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_description'] : 'Check one or more areas of interest';
+	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && $bp_registration_groups_options['bp_registration_groups_description'] != NULL ) ? sanitize_text_field( $bp_registration_groups_options['bp_registration_groups_description'] ) : 'Check one or more areas of interest';
 
 	// set $bp_registration_groups_display_order to the stored value if it is in the $bp_registration_groups_display_order_options array; fall back to 'alphabetical' otherwise
 	$bp_registration_groups_display_order_options = array( 'active', 'newest', 'popular', 'random', 'alphabetical', 'most-forum-topics', 'most-forum-posts' );
@@ -52,14 +60,14 @@ function bp_registration_groups(){
 
 	/* list groups */ ?>
 		<div class="register-section" id="registration-groups-section">
-			<h4 class="reg_groups_title"><?php echo $bp_registration_groups_title; ?></h3>
-			<p class="reg_groups_description"><?php echo $bp_registration_groups_description; ?></p>
-			<ul class="<?php echo $bp_registration_groups_display_as; ?>">
+			<h4 class="reg_groups_title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
+			<p class="reg_groups_description"><?php echo esc_html( $bp_registration_groups_description ); ?></p>
+			<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
 				<?php $i = 0; $l = 0; ?>
 				<?php if ( bp_has_groups('type='.$bp_registration_groups_display_order.'&per_page='.groups_get_total_group_count() ) ) : while ( bp_groups() && $l < $bp_registration_groups_number_displayed ) : bp_the_group(); ?>
 					<?php if ( in_array( bp_get_group_status(), $bp_registration_groups_show_private_groups, true ) ) { ?>
 					<li class="reg_groups_item">
-						<input class="reg_groups_group_checkbox" type="<?php echo $bp_registration_groups_input_type; ?>" id="field_reg_groups_<?php echo $i; ?>" name="field_reg_groups[]" value="<?php bp_group_id(); ?>" /><label class="reg_groups_group_label" for="field_reg_groups[]"><?php echo bp_get_group_name(); ?></label>
+						<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="field_reg_groups[]" value="<?php echo esc_attr( bp_get_group_id() ); ?>" /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( bp_get_group_name() ); ?></label>
 					</li>
 					<?php $l++; ?>
 					<?php } ?>
@@ -84,7 +92,21 @@ function bp_registration_groups(){
 */
 function bp_registration_groups_save( $usermeta ) {
 
-	$usermeta['field_reg_groups'] = $_POST['field_reg_groups'];
+	// Verify nonce for security
+	if ( ! wp_verify_nonce( $_POST['_bp_registration_groups_nonce'], 'bp_registration_groups_nonce' ) ) {
+		return $usermeta;
+	}
+
+	// Sanitize and validate group selection input
+	if ( isset( $_POST['field_reg_groups'] ) && is_array( $_POST['field_reg_groups'] ) ) {
+		// Sanitize each group ID as positive integer
+		$sanitized_groups = array_map( 'absint', $_POST['field_reg_groups'] );
+		// Remove any zero values (invalid group IDs)
+		$sanitized_groups = array_filter( $sanitized_groups );
+		$usermeta['field_reg_groups'] = $sanitized_groups;
+	} else {
+		$usermeta['field_reg_groups'] = array();
+	}
 
 	return $usermeta;
 
@@ -97,7 +119,21 @@ function bp_registration_groups_save( $usermeta ) {
 */
 function bp_registration_groups_save_s( $user_id ) {
 
-	update_user_meta( $user_id, 'field_reg_groups', $_POST['field_reg_groups'] );
+	// Verify nonce for security
+	if ( ! wp_verify_nonce( $_POST['_bp_registration_groups_nonce'], 'bp_registration_groups_nonce' ) ) {
+		return $user_id;
+	}
+
+	// Sanitize and validate group selection input
+	if ( isset( $_POST['field_reg_groups'] ) && is_array( $_POST['field_reg_groups'] ) ) {
+		// Sanitize each group ID as positive integer
+		$sanitized_groups = array_map( 'absint', $_POST['field_reg_groups'] );
+		// Remove any zero values (invalid group IDs)
+		$sanitized_groups = array_filter( $sanitized_groups );
+		update_user_meta( $user_id, 'field_reg_groups', $sanitized_groups );
+	} else {
+		update_user_meta( $user_id, 'field_reg_groups', array() );
+	}
 
 	return $user_id;
 
@@ -128,7 +164,7 @@ function bp_registration_groups_join( $user_id, $key, $user ) {
 *
 * Join groups when account is activate in a non-multisite user environment
 */
-function bp_registration_groups_join_s( $user_id ) {
+function bp_registration_groups_join_s( $user_id, $key = '', $user = array() ) {
 	global $bp, $wpdb;
 
 	$reg_groups = get_user_meta( $user_id, 'field_reg_groups', true );

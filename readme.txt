@@ -1,15 +1,16 @@
 === BuddyPress Registration Groups ===
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.2.1
+Version: 1.3.0
 Tags: wordpress, multisite, buddypress, groups, registration, autojoin
-Requires at least: WordPress 3.7.1
-Tested up to: WordPress 4.9.2
+Requires at least: 6.1
+Tested up to: 6.8
+Requires PHP: 7.4
 License: GNU/GPL 2
 Author: Eric Johnson
 Author URI: http://hardlyneutral.com/
 Contributors: hardlyneutral
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TYJT5VMV8YMVQ
-Stable tag: Release_1.2.1
+Stable tag: 1.3.0
 
 Allows a new BuddyPress user to select groups to join during the registration process.
 
@@ -124,6 +125,20 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 4. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+= 1.3.0 =
+* SECURITY: Fixed critical security vulnerabilities in form data handling
+* SECURITY: Added proper input sanitization and validation for all user inputs
+* SECURITY: Implemented nonce verification for form submissions
+* SECURITY: Added ABSPATH security checks to prevent direct file access
+* COMPATIBILITY: Updated for WordPress 6.8 and BuddyPress 14.3.4 compatibility
+* COMPATIBILITY: Updated minimum requirements to WordPress 6.1+ and PHP 7.4+
+* COMPATIBILITY: Updated BuddyPress minimum requirement to version 10.0.0+
+* FIX: Corrected HTML validation error with h4 tag closure
+* FIX: Added proper output escaping for all HTML elements
+* FIX: Synchronized version numbers across all plugin files
+* ENHANCEMENT: Improved coding standards compliance
+* ENHANCEMENT: Added Network activation support
+
 = 1.2.1 =
 * Maintenance update.
 * Added CSS documentation to the readme.
@@ -223,6 +238,11 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 * First version!
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+* CRITICAL SECURITY UPDATE: This version fixes multiple security vulnerabilities. Update immediately.
+* COMPATIBILITY UPDATE: Now requires WordPress 6.1+, PHP 7.4+, and BuddyPress 10.0.0+.
+* Fully compatible with WordPress 6.8 and BuddyPress 14.3.4.
 
 = 1.2.1 =
 * Maintenance update. No changes to core functionality. Safe to upgrade.
