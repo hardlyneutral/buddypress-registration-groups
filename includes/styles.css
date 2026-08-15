@@ -45,3 +45,14 @@
 		padding: 6px;
     overflow: auto;
 }
+
+/**
+ * The BP Nouveau template pack lays the register page sections out with
+ * flexbox. Without a flex size of its own the groups section gets squeezed
+ * into a narrow extra column, so give it a full row instead.
+ */
+#buddypress .layout-wrap #registration-groups-section {
+	float: none;
+	width: 100%;
+	flex: 1 100%;
+}

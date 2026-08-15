@@ -2,15 +2,17 @@ buddypress-registration-groups
 ==============================
 Contributors: @hardlyneutral
 
-Tags: wordpress, multisite, buddypress, groups, registration, autojoin
+Tags: buddypress, groups, registration, autojoin, multisite
 
-Requires at least: WordPress 3.7.1
+Requires at least: WordPress 6.1
 
-Tested up to: WordPress 4.9.2
+Tested up to: WordPress 7.0 (with BuddyPress 14.5, PHP 8.4)
 
-License: GNU/GPL 2
+Requires PHP: 7.4
 
-Stable tag: 1.2.1
+License: GPLv2 or later
+
+Stable tag: 1.3.0
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -104,6 +106,15 @@ Here is a list of the current selectors used in ```includes/styles.css```.
 }
 ```
 
+**Groups section - BP Nouveau template pack:**
+```
+#buddypress .layout-wrap #registration-groups-section {
+	float: none;
+	width: 100%;
+	flex: 1 100%;
+}
+```
+
 Frequently Asked Questions
 --------------------------
 ### Does this plugin show Private groups?
@@ -117,6 +128,20 @@ Use the WordPress plugin [support form here](http://wordpress.org/support/plugin
 
 Changelog
 ---------
+### 1.3.0
+* Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4.
+* Fixed group joining on single-site (non-multisite) installs. BuddyPress 14 stopped creating the user account at signup time, which caused group selections to be silently lost. Selections are now stored in the signup meta and applied when the account is activated — the same flow on single site and multisite.
+* Fixed the group list not appearing when the Extended Profiles component is disabled. The list now also hooks `bp_before_registration_submit_buttons` as a fallback location.
+* Fixed the groups section being squeezed into a narrow column with the BP Nouveau template pack.
+* Security hardening: submitted group selections are now sanitized and validated against the groups the form actually offers, so crafted submissions can no longer auto-join hidden groups (or private groups when "Show Private Groups" is off).
+* Removed the "Most Forum Topics" and "Most Forum Posts" display orders; BuddyPress removed these years ago and silently sorted by activity instead. Saved settings using them are treated as "Active".
+* Groups are now queried with the modern BuddyPress `status` argument and without a separate count query.
+* Fixed an admin settings bug where the "Display As" setting always rendered "Checkboxes Multiselect" as selected.
+* Fixed HTML validity and accessibility issues: mismatched heading tags, labels not linked to their inputs, and the "no groups" message nested inside the list element.
+* Escaped all output and sanitized all input per current WordPress plugin guidelines.
+* The stylesheet now loads only on the registration page and carries a version for cache busting.
+* Updated plugin headers and readme metadata (Requires PHP, License URI, tags, plain-version stable tag).
+
 ### 1.2.1
 * Maintenance update.
 * Added CSS documentation to the readme.
