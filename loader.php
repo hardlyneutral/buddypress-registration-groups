@@ -7,6 +7,7 @@ Description: Allows a new BuddyPress user to select groups to join during the re
 Version: 1.3.0
 Requires at least: 6.1
 Requires PHP: 7.4
+Requires Plugins: buddypress
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Author: Eric Johnson

@@ -30,6 +30,8 @@ Options are available in the admin area to configure the title of the groups lis
 description of the groups list, whether private groups are visible to new users, the order in which groups are
 displayed, and how many groups will be visible.
 
+Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
+
 Installation
 ------------
 The plugin is packaged so that you can use the built in plugin installer in the WordPress admin section. Just select the .zip file and install away! Activate the plugin once it is installed.
