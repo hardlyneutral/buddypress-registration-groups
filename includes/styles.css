@@ -47,6 +47,15 @@
 }
 
 /**
+ * Auto-join groups shown as locked entries.
+ */
+.reg_groups_automatic {
+	font-style: italic;
+	color: gray;
+	font-size: 0.9em;
+}
+
+/**
  * The BP Nouveau template pack lays the register page sections out with
  * flexbox. Without a flex size of its own the groups section gets squeezed
  * into a narrow extra column, so give it a full row instead.

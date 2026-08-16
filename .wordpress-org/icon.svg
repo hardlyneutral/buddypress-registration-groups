@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff8a4c"/>
+      <stop offset="1" stop-color="#d84800"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- side members (behind, translucent) -->
+  <g fill="#ffffff" opacity="0.5">
+    <circle cx="134" cy="196" r="40"/>
+    <path d="M62 342 a72 72 0 0 1 144 0 v26 h-144 z"/>
+    <circle cx="378" cy="196" r="40"/>
+    <path d="M306 342 a72 72 0 0 1 144 0 v26 h-144 z"/>
+  </g>
+
+  <!-- central member -->
+  <g fill="#ffffff" stroke="#e05500" stroke-width="10">
+    <circle cx="256" cy="182" r="58"/>
+    <path d="M154 368 a102 102 0 0 1 204 0 v22 h-204 z"/>
+  </g>
+
+  <!-- join checkmark badge -->
+  <circle cx="376" cy="376" r="86" fill="#ffffff"/>
+  <path d="M332 378 l32 34 l58 -66" fill="none" stroke="#2e9940" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

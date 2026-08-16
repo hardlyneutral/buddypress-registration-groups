@@ -39,6 +39,34 @@ function bp_registration_groups_allowed_statuses() {
 }
 
 /**
+* bp_registration_groups_get_id_list_option()
+*
+* Read one of the per-group ID lists (hidden, checked-by-default, auto-join)
+* from the options array as a clean list of group IDs.
+*/
+function bp_registration_groups_get_id_list_option( $key ) {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	if ( empty( $options[ $key ] ) || ! is_array( $options[ $key ] ) ) {
+		return array();
+	}
+
+	return array_values( array_unique( array_filter( array_map( 'absint', $options[ $key ] ) ) ) );
+}
+
+/**
+* bp_registration_groups_autojoin_shows_locked()
+*
+* Whether auto-join groups appear on the registration form as pre-checked,
+* locked entries (true) or are left off the form entirely (false, default).
+*/
+function bp_registration_groups_autojoin_shows_locked() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return isset( $options['bp_registration_groups_autojoin_display'] ) && '1' == $options['bp_registration_groups_autojoin_display'];
+}
+
+/**
 * bp_registration_groups()
 *
 * Add list of groups to the registration page. Display a message stating no
@@ -97,6 +125,16 @@ function bp_registration_groups() {
 	// number of groups to display; 0 shows all groups
 	$bp_registration_groups_number_displayed = isset( $bp_registration_groups_options['bp_registration_groups_number_displayed'] ) ? absint( $bp_registration_groups_options['bp_registration_groups_number_displayed'] ) : 0;
 
+	// per-group settings
+	$bp_registration_groups_hidden_ids   = bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' );
+	$bp_registration_groups_checked_ids  = bp_registration_groups_get_id_list_option( 'bp_registration_groups_checked_groups' );
+	$bp_registration_groups_autojoin_ids = bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' );
+
+	// groups excluded from the selectable list: per-group hidden groups, and
+	// auto-join groups (which are either left off the form entirely or
+	// rendered separately as locked entries)
+	$bp_registration_groups_excluded_ids = array_values( array_unique( array_merge( $bp_registration_groups_hidden_ids, $bp_registration_groups_autojoin_ids ) ) );
+
 	// query args: the 'status' argument (BuddyPress 7.0+) restricts results to
 	// the allowed statuses, and per_page 0 returns every matching group
 	$bp_registration_groups_query_args = array(
@@ -104,26 +142,60 @@ function bp_registration_groups() {
 		'per_page' => $bp_registration_groups_number_displayed,
 		'status'   => $bp_registration_groups_show_statuses,
 	);
+	if ( ! empty( $bp_registration_groups_excluded_ids ) ) {
+		$bp_registration_groups_query_args['exclude'] = $bp_registration_groups_excluded_ids;
+	}
+
+	// auto-join groups shown as locked, pre-checked entries
+	$bp_registration_groups_locked_groups = array();
+	if ( ! empty( $bp_registration_groups_autojoin_ids ) && bp_registration_groups_autojoin_shows_locked() ) {
+		foreach ( $bp_registration_groups_autojoin_ids as $bp_registration_groups_autojoin_id ) {
+			$bp_registration_groups_autojoin_group = groups_get_group( $bp_registration_groups_autojoin_id );
+			// Never name a status-hidden group on the public form; it is
+			// still auto-joined at activation.
+			if ( ! empty( $bp_registration_groups_autojoin_group->id ) && 'hidden' !== $bp_registration_groups_autojoin_group->status ) {
+				$bp_registration_groups_locked_groups[] = $bp_registration_groups_autojoin_group;
+			}
+		}
+	}
 
 	/* list groups */ ?>
 		<div class="register-section" id="registration-groups-section">
 			<h4 class="reg_groups_title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
 			<p class="reg_groups_description"><?php echo esc_html( $bp_registration_groups_description ); ?></p>
-			<?php if ( bp_has_groups( $bp_registration_groups_query_args ) ) : ?>
+			<?php $bp_registration_groups_has_groups = bp_has_groups( $bp_registration_groups_query_args ); ?>
+			<?php if ( $bp_registration_groups_has_groups || ! empty( $bp_registration_groups_locked_groups ) ) : ?>
 			<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
-				<?php $i = 0; ?>
-				<?php while ( bp_groups() ) : bp_the_group(); ?>
+				<?php foreach ( $bp_registration_groups_locked_groups as $bp_registration_groups_locked_group ) : ?>
+					<li class="reg_groups_item reg_groups_item_locked">
+						<input class="reg_groups_group_checkbox" type="checkbox" id="field_reg_groups_auto_<?php echo esc_attr( $bp_registration_groups_locked_group->id ); ?>" checked="checked" disabled="disabled" /><label class="reg_groups_group_label" for="field_reg_groups_auto_<?php echo esc_attr( $bp_registration_groups_locked_group->id ); ?>"><?php echo esc_html( $bp_registration_groups_locked_group->name ); ?> <em class="reg_groups_automatic"><?php
+						/* translators: label shown next to groups that every new user joins automatically */
+						esc_html_e( '(automatic)', 'buddypress-registration-groups-1' );
+						?></em></label>
+					</li>
+				<?php endforeach; ?>
+				<?php $i = 0; $bp_registration_groups_default_checked = false; ?>
+				<?php if ( $bp_registration_groups_has_groups ) : while ( bp_groups() ) : bp_the_group(); ?>
 					<?php
-					// Safety net for BuddyPress versions without the 'status' query argument.
-					if ( ! in_array( bp_get_group_status(), $bp_registration_groups_show_statuses, true ) ) {
+					// Safety net for BuddyPress versions without the 'status' or
+					// 'exclude' query arguments.
+					if ( ! in_array( bp_get_group_status(), $bp_registration_groups_show_statuses, true )
+						|| in_array( absint( bp_get_group_id() ), $bp_registration_groups_excluded_ids, true ) ) {
 						continue;
+					}
+					// Pre-check groups the admin marked as checked by default;
+					// in radio mode only the first such group is checked.
+					$bp_registration_groups_is_checked = in_array( absint( bp_get_group_id() ), $bp_registration_groups_checked_ids, true )
+						&& ( 'radio' !== $bp_registration_groups_input_type || ! $bp_registration_groups_default_checked );
+					if ( $bp_registration_groups_is_checked ) {
+						$bp_registration_groups_default_checked = true;
 					}
 					?>
 					<li class="reg_groups_item">
-						<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="field_reg_groups[]" value="<?php echo esc_attr( bp_get_group_id() ); ?>" /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( bp_get_group_name() ); ?></label>
+						<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="field_reg_groups[]" value="<?php echo esc_attr( bp_get_group_id() ); ?>"<?php checked( $bp_registration_groups_is_checked ); ?> /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( bp_get_group_name() ); ?></label>
 					</li>
 					<?php $i++; ?>
-				<?php endwhile; ?>
+				<?php endwhile; endif; ?>
 			</ul>
 			<?php else : ?>
 			<p class="reg_groups_none">
@@ -157,11 +229,21 @@ function bp_registration_groups_save( $usermeta ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	$group_ids = array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['field_reg_groups'] ) ) ) );
 
-	// Only keep groups the registration form actually offers.
+	// Only keep groups the registration form actually offers: allowed status,
+	// not hidden per-group, and not an auto-join group (those are joined
+	// automatically and are never selectable).
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
+	$not_selectable   = array_merge(
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
+	);
 	$valid_group_ids  = array();
 
 	foreach ( $group_ids as $group_id ) {
+		if ( in_array( $group_id, $not_selectable, true ) ) {
+			continue;
+		}
+
 		$group = groups_get_group( $group_id );
 
 		if ( ! empty( $group->id ) && in_array( $group->status, $allowed_statuses, true ) ) {
@@ -189,18 +271,17 @@ function bp_registration_groups_save( $usermeta ) {
 add_action( 'bp_core_activated_user', 'bp_registration_groups_join', 10, 3 );
 function bp_registration_groups_join( $user_id, $key = '', $user = false ) {
 
-	if ( empty( $user['meta']['field_reg_groups'] ) || ! is_array( $user['meta']['field_reg_groups'] ) ) {
-		return;
-	}
+	$selected_group_ids = ( ! empty( $user['meta']['field_reg_groups'] ) && is_array( $user['meta']['field_reg_groups'] ) ) ? $user['meta']['field_reg_groups'] : array();
 
-	// Re-check each group against the current settings so activations cannot
-	// join groups the registration form no longer offers.
+	// Re-check each selected group against the current settings so
+	// activations cannot join groups the registration form no longer offers.
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
+	$hidden_group_ids = bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' );
 
-	foreach ( $user['meta']['field_reg_groups'] as $group_id ) {
+	foreach ( $selected_group_ids as $group_id ) {
 		$group_id = absint( $group_id );
 
-		if ( ! $group_id ) {
+		if ( ! $group_id || in_array( $group_id, $hidden_group_ids, true ) ) {
 			continue;
 		}
 
@@ -211,6 +292,17 @@ function bp_registration_groups_join( $user_id, $key = '', $user = false ) {
 		}
 
 		groups_join_group( $group_id, $user_id );
+	}
+
+	// Every new user joins the admin-designated auto-join groups, whether or
+	// not they selected anything. These are exempt from the status check
+	// because the admin chose them explicitly.
+	foreach ( bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' ) as $autojoin_group_id ) {
+		$autojoin_group = groups_get_group( $autojoin_group_id );
+
+		if ( ! empty( $autojoin_group->id ) ) {
+			groups_join_group( $autojoin_group_id, $user_id );
+		}
 	}
 
 }
@@ -347,6 +439,32 @@ class BPRegistrationGroupsSettingsPage
       'bp-registration-groups-settings-admin',
       'bp_registration_groups_display_options_section_id'
     );
+
+    add_settings_section(
+      'bp_registration_groups_per_group_options_section_id',
+			/* translators: displays the section title for the per-group options on the plugin admin page */
+			__('Per-Group Options', 'buddypress-registration-groups-1'),
+      array( $this, 'print_per_group_options_section_info' ),
+      'bp-registration-groups-settings-admin'
+    );
+
+    add_settings_field(
+      'bp_registration_groups_per_group_settings',
+			/* translators: displays the title text for the per-group settings table on the plugin admin page */
+			__('Group Settings', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_per_group_settings_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_per_group_options_section_id'
+    );
+
+    add_settings_field(
+      'bp_registration_groups_autojoin_display',
+			/* translators: displays the title text for the "Auto-Join Display" setting of the plugin admin page */
+			__('Auto-Join Display', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_autojoin_display_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_per_group_options_section_id'
+    );
   }
 
   /**
@@ -376,6 +494,16 @@ class BPRegistrationGroupsSettingsPage
 
     if( isset( $input['bp_registration_groups_number_displayed'] ) )
         $new_input['bp_registration_groups_number_displayed'] = absint( $input['bp_registration_groups_number_displayed'] );
+
+    // per-group ID lists; absent keys mean no boxes were checked
+    foreach ( array( 'bp_registration_groups_hidden_groups', 'bp_registration_groups_checked_groups', 'bp_registration_groups_autojoin_groups' ) as $id_list_key ) {
+        if ( isset( $input[ $id_list_key ] ) && is_array( $input[ $id_list_key ] ) ) {
+            $new_input[ $id_list_key ] = array_values( array_unique( array_filter( array_map( 'absint', $input[ $id_list_key ] ) ) ) );
+        }
+    }
+
+    if( isset( $input['bp_registration_groups_autojoin_display'] ) )
+        $new_input['bp_registration_groups_autojoin_display'] = absint( $input['bp_registration_groups_autojoin_display'] );
 
     return $new_input;
   }
@@ -523,6 +651,115 @@ class BPRegistrationGroupsSettingsPage
 
 		/* translators: displays the help text for the "Number of Groups to Display" section of the plugin admin page */
 		echo '<br /><em>' . esc_html__('Default: 0 (show all groups)', 'buddypress-registration-groups-1') . '</em>';
+  }
+
+  /**
+   * Print the per-group options section text
+   */
+  public function print_per_group_options_section_info()
+  {
+		/* translators: displays the help text for the "Per-Group Options" section of the plugin admin page */
+		esc_html_e( 'Fine-tune individual groups: hide a group from the registration form, pre-check it, or make every new user join it automatically. Auto-join groups are never selectable on the form, and hidden groups marked auto-join are joined silently — their names are never displayed on the registration form.', 'buddypress-registration-groups-1' );
+  }
+
+  /**
+   * Render the per-group settings table
+   */
+  public function bp_registration_groups_per_group_settings_callback()
+  {
+		$groups = groups_get_groups( array(
+			'type'        => 'alphabetical',
+			'show_hidden' => true,
+			'per_page'    => null,
+			'page'        => null,
+		) );
+
+		if ( empty( $groups['groups'] ) ) {
+			/* translators: shown on the plugin admin page when the site has no groups yet */
+			echo '<em>' . esc_html__( 'No groups exist yet.', 'buddypress-registration-groups-1' ) . '</em>';
+			return;
+		}
+
+		$hidden_ids   = isset( $this->options['bp_registration_groups_hidden_groups'] ) ? array_map( 'absint', (array) $this->options['bp_registration_groups_hidden_groups'] ) : array();
+		$checked_ids  = isset( $this->options['bp_registration_groups_checked_groups'] ) ? array_map( 'absint', (array) $this->options['bp_registration_groups_checked_groups'] ) : array();
+		$autojoin_ids = isset( $this->options['bp_registration_groups_autojoin_groups'] ) ? array_map( 'absint', (array) $this->options['bp_registration_groups_autojoin_groups'] ) : array();
+
+		echo '<div style="max-height: 320px; overflow-y: auto; border: 1px solid #c3c4c7; background: #fff; padding: 0 12px; max-width: 640px;">';
+		echo '<table class="widefat striped" style="border: none;"><thead><tr>';
+		/* translators: column header for the group name in the per-group settings table */
+		echo '<th>' . esc_html__( 'Group', 'buddypress-registration-groups-1' ) . '</th>';
+		/* translators: column header for hiding a group from the registration form */
+		echo '<th>' . esc_html__( 'Hide', 'buddypress-registration-groups-1' ) . '</th>';
+		/* translators: column header for pre-checking a group on the registration form */
+		echo '<th>' . esc_html__( 'Checked by default', 'buddypress-registration-groups-1' ) . '</th>';
+		/* translators: column header for automatically joining new users to a group */
+		echo '<th>' . esc_html__( 'Auto-join', 'buddypress-registration-groups-1' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $groups['groups'] as $group ) {
+			$group_id     = absint( $group->id );
+			$is_hidden    = 'hidden' === $group->status;
+			$status_label = $is_hidden ? ' <em>(' . esc_html( $group->status ) . ')</em>' : ( 'private' === $group->status ? ' <em>(' . esc_html( $group->status ) . ')</em>' : '' );
+
+			echo '<tr>';
+			echo '<td>' . esc_html( $group->name ) . $status_label . '</td>';
+			// Status-hidden groups never appear on the form, so the Hide and
+			// Checked columns do not apply to them; Auto-join still does.
+			if ( $is_hidden ) {
+				echo '<td>&mdash;</td><td>&mdash;</td>';
+			} else {
+				printf(
+					'<td><input type="checkbox" name="bp_registration_groups_option_handle[bp_registration_groups_hidden_groups][]" value="%1$d"%2$s aria-label="%3$s" /></td>',
+					$group_id,
+					checked( in_array( $group_id, $hidden_ids, true ), true, false ),
+					/* translators: %s: group name. Accessible label for the per-group Hide checkbox */
+					esc_attr( sprintf( __( 'Hide %s from the registration form', 'buddypress-registration-groups-1' ), $group->name ) )
+				);
+				printf(
+					'<td><input type="checkbox" name="bp_registration_groups_option_handle[bp_registration_groups_checked_groups][]" value="%1$d"%2$s aria-label="%3$s" /></td>',
+					$group_id,
+					checked( in_array( $group_id, $checked_ids, true ), true, false ),
+					/* translators: %s: group name. Accessible label for the per-group Checked-by-default checkbox */
+					esc_attr( sprintf( __( 'Check %s by default on the registration form', 'buddypress-registration-groups-1' ), $group->name ) )
+				);
+			}
+			printf(
+				'<td><input type="checkbox" name="bp_registration_groups_option_handle[bp_registration_groups_autojoin_groups][]" value="%1$d"%2$s aria-label="%3$s" /></td>',
+				$group_id,
+				checked( in_array( $group_id, $autojoin_ids, true ), true, false ),
+				/* translators: %s: group name. Accessible label for the per-group Auto-join checkbox */
+				esc_attr( sprintf( __( 'Automatically join new users to %s', 'buddypress-registration-groups-1' ), $group->name ) )
+			);
+			echo '</tr>';
+		}
+
+		echo '</tbody></table></div>';
+  }
+
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_autojoin_display_callback()
+  {
+		$autojoin_display_options = array(
+			/* translators: displays the text for hiding auto-join groups from the registration form list */
+			'0' => __( 'Do not show auto-join groups on the registration form (default)', 'buddypress-registration-groups-1' ),
+			/* translators: displays the text for showing auto-join groups as locked entries on the registration form */
+			'1' => __( 'Show auto-join groups as pre-checked, locked entries labeled "(automatic)"', 'buddypress-registration-groups-1' ),
+		);
+
+		$current = ( isset( $this->options['bp_registration_groups_autojoin_display'] ) && '1' == $this->options['bp_registration_groups_autojoin_display'] ) ? '1' : '0';
+
+		$rows = array();
+		foreach ( $autojoin_display_options as $value => $label ) {
+			$rows[] = sprintf(
+				'<label><input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_autojoin_display]" value="%s"> %s</label>',
+				checked( $current, $value, false ),
+				esc_attr( $value ),
+				esc_html( $label )
+			);
+		}
+		echo implode( '<br />', $rows ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rows are escaped above.
   }
 }
 
