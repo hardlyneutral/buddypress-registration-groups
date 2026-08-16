@@ -1,15 +1,13 @@
 === BuddyPress Registration Groups ===
-Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
-Version: 1.2.1
-Tags: wordpress, multisite, buddypress, groups, registration, autojoin
-Requires at least: WordPress 3.7.1
-Tested up to: WordPress 4.9.2
-License: GNU/GPL 2
-Author: Eric Johnson
-Author URI: http://hardlyneutral.com/
 Contributors: hardlyneutral
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TYJT5VMV8YMVQ
-Stable tag: Release_1.2.1
+Tags: buddypress, groups, registration, autojoin, multisite
+Requires at least: 6.1
+Tested up to: 7.0
+Requires PHP: 7.4
+Stable tag: 1.3.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Allows a new BuddyPress user to select groups to join during the registration process.
 
@@ -26,6 +24,8 @@ New users will automatically join any of the groups selected during the registra
 Options are available in the admin area to configure the title of the groups list on the registration page, the
 description of the groups list, whether private groups are visible to new users, the order in which groups are
 displayed, and how many groups will be visible.
+
+Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
 == Installation ==
 
@@ -103,6 +103,15 @@ Here is a list of the current selectors used in `includes/styles.css`.
 }
 `
 
+**Groups section - BP Nouveau template pack:**
+`
+#buddypress .layout-wrap #registration-groups-section {
+	float: none;
+	width: 100%;
+	flex: 1 100%;
+}
+`
+
 == Frequently Asked Questions ==
 
 = Does this plugin show Private groups? =
@@ -117,6 +126,10 @@ No, it does not. The BuddyPress core makes it a bit difficult to easily get thes
 
 Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
 
+= Why don't I see the group list on the registration page? =
+
+Make sure BuddyPress is installed and active, the Groups component is enabled (Settings > BuddyPress > Components), and at least one public group exists. The plugin shows an admin notice when BuddyPress is active but the Groups component is disabled.
+
 == Screenshots ==
 1. Screenshot of the plugin showing groups as a list of checkboxes on the new user registration page.
 2. Screenshot of the plugin showing groups as a list of checkboxes in a scrollable container on the new user registration page.
@@ -124,6 +137,20 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 4. Screenshot of the admin settings menu and options.
 
 == Changelog ==
+= 1.3.0 =
+* Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4, on both single site and multisite.
+* Fixed group joining on single-site (non-multisite) installs. BuddyPress 14 stopped creating the user account at signup time, which caused group selections to be silently lost. Selections are now stored in the signup meta and applied when the account is activated — the same flow on single site and multisite.
+* Fixed the group list not appearing when the Extended Profiles component is disabled. The list now also hooks 'bp_before_registration_submit_buttons' as a fallback location.
+* Fixed the groups section being squeezed into a narrow column with the BP Nouveau template pack.
+* Security hardening: submitted group selections are now sanitized and validated against the groups the form actually offers, so crafted submissions can no longer auto-join hidden groups (or private groups when "Show Private Groups" is off).
+* Removed the "Most Forum Topics" and "Most Forum Posts" display orders; BuddyPress removed these years ago and silently sorted by activity instead. Saved settings using them are treated as "Active".
+* Groups are now queried with the modern BuddyPress 'status' argument and without a separate count query.
+* Fixed an admin settings bug where the "Display As" setting always rendered "Checkboxes Multiselect" as selected.
+* Fixed HTML validity and accessibility issues: mismatched heading tags, labels not linked to their inputs, and the "no groups" message nested inside the list element.
+* Escaped all output and sanitized all input per current WordPress plugin guidelines.
+* The stylesheet now loads only on the registration page and carries a version for cache busting.
+* Updated plugin headers and readme metadata (Requires PHP, License URI, tags, plain-version stable tag).
+
 = 1.2.1 =
 * Maintenance update.
 * Added CSS documentation to the readme.
@@ -223,6 +250,9 @@ Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddy
 * First version!
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+* Major compatibility release for current WordPress and BuddyPress. Fixes group joining on single-site installs, which had been broken since BuddyPress 14. Upgrade immediately.
 
 = 1.2.1 =
 * Maintenance update. No changes to core functionality. Safe to upgrade.
