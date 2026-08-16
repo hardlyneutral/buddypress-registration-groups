@@ -9,12 +9,14 @@ of `/trunk` and `/tags`, not inside them):
 
 ```
 svn co https://plugins.svn.wordpress.org/buddypress-registration-groups-1 svn
-cp .wordpress-org/icon.svg .wordpress-org/icon-*.png svn/assets/
-cd svn && svn add assets/icon* && svn ci -m "Add plugin icon"
+cp .wordpress-org/icon.svg .wordpress-org/icon-*.png .wordpress-org/screenshot-*.png svn/assets/
+cd svn && svn add --force assets && svn ci -m "Update plugin icon and screenshots"
 ```
 
 - `icon.svg` — source artwork; wordpress.org serves SVG icons directly.
 - `icon-256x256.png` / `icon-128x128.png` — raster fallbacks.
-
-The existing `screenshot-*.png` files in the plugin root can also be moved to
-`/assets` on a future release to slim down the download zip.
+- `screenshot-1.png` … `screenshot-5.png` — directory screenshots; their
+  captions come from the numbered list in the `== Screenshots ==` section of
+  `readme.txt`. Screenshots were moved here from the plugin root as of 1.3.0,
+  so they no longer bloat the download zip. Remove any old
+  `screenshot-*.png` files from `/trunk` in the same release.
