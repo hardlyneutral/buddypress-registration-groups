@@ -138,7 +138,7 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 
 == Changelog ==
 = 1.3.0 =
-* Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4.
+* Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4, on both single site and multisite.
 * Fixed group joining on single-site (non-multisite) installs. BuddyPress 14 stopped creating the user account at signup time, which caused group selections to be silently lost. Selections are now stored in the signup meta and applied when the account is activated — the same flow on single site and multisite.
 * Fixed the group list not appearing when the Extended Profiles component is disabled. The list now also hooks 'bp_before_registration_submit_buttons' as a fallback location.
 * Fixed the groups section being squeezed into a narrow column with the BP Nouveau template pack.
