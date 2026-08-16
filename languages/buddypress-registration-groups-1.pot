@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-15T22:17:28+00:00\n"
+"POT-Creation-Date: 2026-08-16T03:22:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: buddypress-registration-groups-1\n"
@@ -39,135 +39,213 @@ msgstr ""
 msgid "http://hardlyneutral.com/"
 msgstr ""
 
-#: includes/bp-registration-groups.php:72
+#: includes/bp-registration-groups.php:100
 msgid "Groups"
 msgstr ""
 
-#: includes/bp-registration-groups.php:75
+#: includes/bp-registration-groups.php:103
 msgid "Check one or more areas of interest"
 msgstr ""
 
+#. translators: label shown next to groups that every new user joins automatically
+#: includes/bp-registration-groups.php:171
+msgid "(automatic)"
+msgstr ""
+
 #. translators: text that is displayed on the buddypress user registration form when there are no groups that can be displayed
-#: includes/bp-registration-groups.php:132
+#: includes/bp-registration-groups.php:202
 msgid "No groups are available at this time."
 msgstr ""
 
 #. translators: the text to be displayed in the title tags of the page when the menu is selected
-#: includes/bp-registration-groups.php:247
+#: includes/bp-registration-groups.php:337
 msgid "BP Registration Groups Settings"
 msgstr ""
 
 #. translators: the text to be used for the menu
-#: includes/bp-registration-groups.php:249
-#: includes/bp-registration-groups.php:265
+#: includes/bp-registration-groups.php:339
+#: includes/bp-registration-groups.php:355
 msgid "BP Registration Groups"
 msgstr ""
 
 #. translators: displays the page title for the plugin admin page
-#: includes/bp-registration-groups.php:292
+#: includes/bp-registration-groups.php:382
 msgid "Display Options"
 msgstr ""
 
 #. translators: displays the title text for the "Title" section of the plugin admin page
-#: includes/bp-registration-groups.php:300
+#: includes/bp-registration-groups.php:390
 msgid "Title"
 msgstr ""
 
 #. translators: displays the title text for the "Description" section of the plugin admin page
-#: includes/bp-registration-groups.php:309
+#: includes/bp-registration-groups.php:399
 msgid "Description"
 msgstr ""
 
 #. translators: displays the title text for the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:318
+#: includes/bp-registration-groups.php:408
 msgid "Display Order"
 msgstr ""
 
 #. translators: displays the title text for the "Display As" section of the plugin admin page
-#: includes/bp-registration-groups.php:327
+#: includes/bp-registration-groups.php:417
 msgid "Display As"
 msgstr ""
 
 #. translators: displays the title text for the "Show Private Groups" section of the plugin admin page
-#: includes/bp-registration-groups.php:336
+#: includes/bp-registration-groups.php:426
 msgid "Show Private Groups"
 msgstr ""
 
 #. translators: displays the title text for the "Number of Groups to Display" section of the plugin admin page
-#: includes/bp-registration-groups.php:345
+#: includes/bp-registration-groups.php:435
 msgid "Number of Groups to Display"
 msgstr ""
 
+#. translators: displays the section title for the per-group options on the plugin admin page
+#: includes/bp-registration-groups.php:444
+msgid "Per-Group Options"
+msgstr ""
+
+#. translators: displays the title text for the per-group settings table on the plugin admin page
+#: includes/bp-registration-groups.php:452
+msgid "Group Settings"
+msgstr ""
+
+#. translators: displays the title text for the "Auto-Join Display" setting of the plugin admin page
+#: includes/bp-registration-groups.php:461
+msgid "Auto-Join Display"
+msgstr ""
+
 #. translators: displays the help text for the "Display Options" section of the plugin admin page
-#: includes/bp-registration-groups.php:389
+#: includes/bp-registration-groups.php:515
 msgid "These options allow you to customize the list of groups on the new user registration form."
 msgstr ""
 
 #. translators: displays the help text for the "Title" section of the plugin admin page
-#: includes/bp-registration-groups.php:400
+#: includes/bp-registration-groups.php:526
 msgid "Default: Groups"
 msgstr ""
 
 #. translators: displays the help text for the "Description" section of the plugin admin page
-#: includes/bp-registration-groups.php:411
+#: includes/bp-registration-groups.php:537
 msgid "Default: Check one or more areas of interest"
 msgstr ""
 
 #. translators: displays the text "Alphabetical (default)" in the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:425
+#: includes/bp-registration-groups.php:551
 msgid "Alphabetical (default)"
 msgstr ""
 
 #. translators: displays the text "Active" in the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:427
+#: includes/bp-registration-groups.php:553
 msgid "Active"
 msgstr ""
 
 #. translators: displays the text "Newest" in the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:429
+#: includes/bp-registration-groups.php:555
 msgid "Newest"
 msgstr ""
 
 #. translators: displays the text "Popular" in the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:431
+#: includes/bp-registration-groups.php:557
 msgid "Popular"
 msgstr ""
 
 #. translators: displays the text "Random" in the "Display Order" section of the plugin admin page
-#: includes/bp-registration-groups.php:433
+#: includes/bp-registration-groups.php:559
 msgid "Random"
 msgstr ""
 
 #. translators: displays the text "Checkboxes Multiselect (default)" in the "Display As" section of the plugin admin page
-#: includes/bp-registration-groups.php:466
+#: includes/bp-registration-groups.php:592
 msgid "Checkboxes Multiselect (default)"
 msgstr ""
 
 #. translators: displays the text "Checkboxes" in the "Display As" section of the plugin admin page
-#: includes/bp-registration-groups.php:468
+#: includes/bp-registration-groups.php:594
 msgid "Checkboxes"
 msgstr ""
 
 #. translators: displays the text "Radio Buttons" in the "Display As" section of the plugin admin page
-#: includes/bp-registration-groups.php:470
+#: includes/bp-registration-groups.php:596
 msgid "Radio Buttons"
 msgstr ""
 
 #. translators: displays the text "Yes" in the "Show Private Groups" section of the plugin admin page
-#: includes/bp-registration-groups.php:498
+#: includes/bp-registration-groups.php:624
 msgid "Yes"
 msgstr ""
 
 #. translators: displays the text "No (default)" in the "Show Private Groups" section of the plugin admin page
-#: includes/bp-registration-groups.php:500
+#: includes/bp-registration-groups.php:626
 msgid "No (default)"
 msgstr ""
 
 #. translators: displays the help text for the "Number of Groups to Display" section of the plugin admin page
-#: includes/bp-registration-groups.php:525
+#: includes/bp-registration-groups.php:651
 msgid "Default: 0 (show all groups)"
 msgstr ""
 
-#: loader.php:59
+#. translators: displays the help text for the "Per-Group Options" section of the plugin admin page
+#: includes/bp-registration-groups.php:660
+msgid "Fine-tune individual groups: hide a group from the registration form, pre-check it, or make every new user join it automatically. Auto-join groups are never selectable on the form."
+msgstr ""
+
+#. translators: shown on the plugin admin page when the site has no groups yet
+#: includes/bp-registration-groups.php:677
+msgid "No groups exist yet."
+msgstr ""
+
+#. translators: column header for the group name in the per-group settings table
+#: includes/bp-registration-groups.php:688
+msgid "Group"
+msgstr ""
+
+#. translators: column header for hiding a group from the registration form
+#: includes/bp-registration-groups.php:690
+msgid "Hide"
+msgstr ""
+
+#. translators: column header for pre-checking a group on the registration form
+#: includes/bp-registration-groups.php:692
+msgid "Checked by default"
+msgstr ""
+
+#. translators: column header for automatically joining new users to a group
+#: includes/bp-registration-groups.php:694
+msgid "Auto-join"
+msgstr ""
+
+#. translators: %s: group name. Accessible label for the per-group Hide checkbox
+#: includes/bp-registration-groups.php:714
+#, php-format
+msgid "Hide %s from the registration form"
+msgstr ""
+
+#. translators: %s: group name. Accessible label for the per-group Checked-by-default checkbox
+#: includes/bp-registration-groups.php:721
+#, php-format
+msgid "Check %s by default on the registration form"
+msgstr ""
+
+#. translators: %s: group name. Accessible label for the per-group Auto-join checkbox
+#: includes/bp-registration-groups.php:729
+#, php-format
+msgid "Automatically join new users to %s"
+msgstr ""
+
+#. translators: displays the text for hiding auto-join groups from the registration form list
+#: includes/bp-registration-groups.php:744
+msgid "Do not show auto-join groups on the registration form (default)"
+msgstr ""
+
+#. translators: displays the text for showing auto-join groups as locked entries on the registration form
+#: includes/bp-registration-groups.php:746
+msgid "Show auto-join groups as pre-checked, locked entries labeled \"(automatic)\""
+msgstr ""
+
+#: loader.php:60
 msgid "BuddyPress Registration Groups requires the BuddyPress Groups component. Please enable it on the BuddyPress settings page."
 msgstr ""

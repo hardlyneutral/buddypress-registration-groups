@@ -30,6 +30,10 @@ Options are available in the admin area to configure the title of the groups lis
 description of the groups list, whether private groups are visible to new users, the order in which groups are
 displayed, and how many groups will be visible.
 
+Per-group options let you fine-tune individual groups: hide a group from the registration form, pre-check a group
+by default, or mark a group as auto-join so every new user becomes a member automatically. Auto-join groups can be
+left off the form entirely or shown as pre-checked, locked entries labeled "(automatic)".
+
 Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
 Installation
@@ -132,6 +136,8 @@ Changelog
 ---------
 ### 1.3.0
 * Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4, on both single site and multisite.
+* New: per-group options. Hide individual groups from the registration form, pre-check groups by default, or mark groups as auto-join so every new user becomes a member automatically at activation. Auto-join groups can be left off the form or shown as pre-checked, locked entries labeled "(automatic)".
+* New: plugin icon artwork for the wordpress.org directory (in the `.wordpress-org` directory of the source repository).
 * Fixed group joining on single-site (non-multisite) installs. BuddyPress 14 stopped creating the user account at signup time, which caused group selections to be silently lost. Selections are now stored in the signup meta and applied when the account is activated — the same flow on single site and multisite.
 * Fixed the group list not appearing when the Extended Profiles component is disabled. The list now also hooks `bp_before_registration_submit_buttons` as a fallback location.
 * Fixed the groups section being squeezed into a narrow column with the BP Nouveau template pack.
