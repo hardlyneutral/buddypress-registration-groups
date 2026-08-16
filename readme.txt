@@ -124,7 +124,7 @@ Yes! You can toggle private group visibility on and off in the admin section
 
 = Does this plugin show Hidden groups? =
 
-No, it does not. The BuddyPress core makes it a bit difficult to easily get these groups without being a logged in user. This might change in the future. If it does, hidden groups will be supported.
+No. Hidden groups are never displayed on the registration form. If you mark a hidden group as auto-join in the per-group options, new users join it silently at activation — its name is still never shown on the form.
 
 = What if the plugin doesn't work? =
 

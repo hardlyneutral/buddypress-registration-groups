@@ -151,7 +151,9 @@ function bp_registration_groups() {
 	if ( ! empty( $bp_registration_groups_autojoin_ids ) && bp_registration_groups_autojoin_shows_locked() ) {
 		foreach ( $bp_registration_groups_autojoin_ids as $bp_registration_groups_autojoin_id ) {
 			$bp_registration_groups_autojoin_group = groups_get_group( $bp_registration_groups_autojoin_id );
-			if ( ! empty( $bp_registration_groups_autojoin_group->id ) ) {
+			// Never name a status-hidden group on the public form; it is
+			// still auto-joined at activation.
+			if ( ! empty( $bp_registration_groups_autojoin_group->id ) && 'hidden' !== $bp_registration_groups_autojoin_group->status ) {
 				$bp_registration_groups_locked_groups[] = $bp_registration_groups_autojoin_group;
 			}
 		}
@@ -657,7 +659,7 @@ class BPRegistrationGroupsSettingsPage
   public function print_per_group_options_section_info()
   {
 		/* translators: displays the help text for the "Per-Group Options" section of the plugin admin page */
-		esc_html_e( 'Fine-tune individual groups: hide a group from the registration form, pre-check it, or make every new user join it automatically. Auto-join groups are never selectable on the form.', 'buddypress-registration-groups-1' );
+		esc_html_e( 'Fine-tune individual groups: hide a group from the registration form, pre-check it, or make every new user join it automatically. Auto-join groups are never selectable on the form, and hidden groups marked auto-join are joined silently — their names are never displayed on the registration form.', 'buddypress-registration-groups-1' );
   }
 
   /**
