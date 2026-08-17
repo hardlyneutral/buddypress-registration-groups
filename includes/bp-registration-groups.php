@@ -67,6 +67,162 @@ function bp_registration_groups_autojoin_shows_locked() {
 }
 
 /**
+* bp_registration_groups_selection_required()
+*
+* Whether the site owner requires registrants to select at least one group
+* before signup can continue. Off by default.
+*/
+function bp_registration_groups_selection_required() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return isset( $options['bp_registration_groups_require_selection'] ) && '1' == $options['bp_registration_groups_require_selection'];
+}
+
+/**
+* bp_registration_groups_get_submitted_group_ids()
+*
+* The group IDs submitted with the signup form, as a clean list. No
+* eligibility checks are applied here; use
+* bp_registration_groups_get_valid_submitted_group_ids() for that.
+*/
+function bp_registration_groups_get_submitted_group_ids() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- BuddyPress verifies the 'bp_new_signup' nonce before the signup hooks that call this run; the form re-render only reads the values back.
+	if ( ! isset( $_POST['field_reg_groups'] ) ) {
+		return array();
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
+	return array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['field_reg_groups'] ) ) ) ) );
+}
+
+/**
+* bp_registration_groups_get_valid_submitted_group_ids()
+*
+* The submitted group IDs the registration form actually offers: the group
+* exists, has an allowed status, is not hidden per-group, and is not an
+* auto-join group (those are joined automatically and are never selectable).
+*/
+function bp_registration_groups_get_valid_submitted_group_ids() {
+	$group_ids = bp_registration_groups_get_submitted_group_ids();
+
+	if ( empty( $group_ids ) ) {
+		return array();
+	}
+
+	$allowed_statuses = bp_registration_groups_allowed_statuses();
+	$not_selectable   = array_merge(
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
+	);
+	$valid_group_ids  = array();
+
+	foreach ( $group_ids as $group_id ) {
+		if ( in_array( $group_id, $not_selectable, true ) ) {
+			continue;
+		}
+
+		$group = groups_get_group( $group_id );
+
+		if ( ! empty( $group->id ) && in_array( $group->status, $allowed_statuses, true ) ) {
+			$valid_group_ids[] = $group_id;
+		}
+	}
+
+	return $valid_group_ids;
+}
+
+/**
+* bp_registration_groups_has_selectable_groups()
+*
+* Whether at least one group is selectable on the registration form: allowed
+* status, not hidden per-group, and not auto-join. Used to avoid locking
+* registration when the requirement is enabled but nothing can be selected.
+*/
+function bp_registration_groups_has_selectable_groups() {
+	$allowed_statuses = bp_registration_groups_allowed_statuses();
+	$excluded_ids     = array_merge(
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
+	);
+
+	$query_args = array(
+		'type'        => 'alphabetical',
+		'per_page'    => null,
+		'page'        => null,
+		'show_hidden' => false,
+		'status'      => $allowed_statuses,
+	);
+	if ( ! empty( $excluded_ids ) ) {
+		$query_args['exclude'] = $excluded_ids;
+	}
+
+	$groups = groups_get_groups( $query_args );
+
+	if ( empty( $groups['groups'] ) ) {
+		return false;
+	}
+
+	// Safety net for BuddyPress versions without the 'status' or 'exclude'
+	// query arguments.
+	foreach ( $groups['groups'] as $group ) {
+		if ( in_array( $group->status, $allowed_statuses, true )
+			&& ! in_array( absint( $group->id ), $excluded_ids, true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+* bp_registration_groups_required_selection_error_message()
+*
+* The error message shown when the required group selection is missing.
+*/
+function bp_registration_groups_required_selection_error_message() {
+	/* translators: error shown on the registration form when the site requires selecting at least one group and none was selected */
+	return __( 'Please select at least one group before completing your registration.', 'buddypress-registration-groups-1' );
+}
+
+/**
+* bp_registration_groups_validate_signup()
+*
+* Reject signups with no valid group selection when the site owner requires
+* one. BuddyPress fires 'bp_signup_validate' on every registration submission
+* — multisite and single site alike — after verifying its own 'bp_new_signup'
+* nonce, and blocks account creation when any signup errors are present.
+*
+* If no selectable groups exist, the requirement is skipped so a
+* misconfiguration cannot lock registration; the settings page surfaces a
+* warning for that state instead.
+*/
+add_action( 'bp_signup_validate', 'bp_registration_groups_validate_signup' );
+function bp_registration_groups_validate_signup() {
+	if ( ! bp_registration_groups_selection_required() ) {
+		return;
+	}
+
+	if ( ! empty( bp_registration_groups_get_valid_submitted_group_ids() ) ) {
+		return;
+	}
+
+	if ( ! bp_registration_groups_has_selectable_groups() ) {
+		return;
+	}
+
+	$bp = buddypress();
+
+	if ( ! isset( $bp->signup ) || ! is_object( $bp->signup ) ) {
+		$bp->signup = new stdClass();
+	}
+	if ( ! isset( $bp->signup->errors ) || ! is_array( $bp->signup->errors ) ) {
+		$bp->signup->errors = array();
+	}
+
+	$bp->signup->errors['field_reg_groups'] = bp_registration_groups_required_selection_error_message();
+}
+
+/**
 * bp_registration_groups()
 *
 * Add list of groups to the registration page. Display a message stating no
@@ -146,6 +302,25 @@ function bp_registration_groups() {
 		$bp_registration_groups_query_args['exclude'] = $bp_registration_groups_excluded_ids;
 	}
 
+	// When a signup was just submitted (and failed validation, or the form is
+	// re-rendering for any other error), the registrant's own selections
+	// replace the admin "checked by default" list so their choices — including
+	// unchecking a default — survive the round trip.
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- read only to re-check boxes on the form re-render; BuddyPress verified the 'bp_new_signup' nonce for the submission itself.
+	$bp_registration_groups_signup_posted = isset( $_POST['signup_submit'] );
+	if ( $bp_registration_groups_signup_posted ) {
+		$bp_registration_groups_checked_ids = bp_registration_groups_get_submitted_group_ids();
+	}
+
+	// inline error set by bp_registration_groups_validate_signup() when a
+	// required group selection is missing
+	$bp_registration_groups_error = '';
+	if ( function_exists( 'buddypress' )
+		&& isset( buddypress()->signup->errors['field_reg_groups'] )
+		&& is_string( buddypress()->signup->errors['field_reg_groups'] ) ) {
+		$bp_registration_groups_error = buddypress()->signup->errors['field_reg_groups'];
+	}
+
 	// auto-join groups shown as locked, pre-checked entries
 	$bp_registration_groups_locked_groups = array();
 	if ( ! empty( $bp_registration_groups_autojoin_ids ) && bp_registration_groups_autojoin_shows_locked() ) {
@@ -163,6 +338,9 @@ function bp_registration_groups() {
 		<div class="register-section" id="registration-groups-section">
 			<h4 class="reg_groups_title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
 			<p class="reg_groups_description"><?php echo esc_html( $bp_registration_groups_description ); ?></p>
+			<?php if ( '' !== $bp_registration_groups_error ) : ?>
+			<div id="reg-groups-error" class="error reg_groups_error" role="alert"><?php echo esc_html( $bp_registration_groups_error ); ?></div>
+			<?php endif; ?>
 			<?php $bp_registration_groups_has_groups = bp_has_groups( $bp_registration_groups_query_args ); ?>
 			<?php if ( $bp_registration_groups_has_groups || ! empty( $bp_registration_groups_locked_groups ) ) : ?>
 			<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
@@ -183,8 +361,9 @@ function bp_registration_groups() {
 						|| in_array( absint( bp_get_group_id() ), $bp_registration_groups_excluded_ids, true ) ) {
 						continue;
 					}
-					// Pre-check groups the admin marked as checked by default;
-					// in radio mode only the first such group is checked.
+					// Pre-check groups the admin marked as checked by default
+					// (or, on a signup re-render, the registrant's submitted
+					// selections); in radio mode only the first is checked.
 					$bp_registration_groups_is_checked = in_array( absint( bp_get_group_id() ), $bp_registration_groups_checked_ids, true )
 						&& ( 'radio' !== $bp_registration_groups_input_type || ! $bp_registration_groups_default_checked );
 					if ( $bp_registration_groups_is_checked ) {
@@ -221,35 +400,10 @@ function bp_registration_groups() {
 add_filter( 'bp_signup_usermeta', 'bp_registration_groups_save' );
 function bp_registration_groups_save( $usermeta ) {
 
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- BuddyPress verifies the 'bp_new_signup' nonce before this filter runs.
-	if ( ! isset( $_POST['field_reg_groups'] ) ) {
-		return $usermeta;
-	}
-
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing
-	$group_ids = array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['field_reg_groups'] ) ) ) );
-
 	// Only keep groups the registration form actually offers: allowed status,
 	// not hidden per-group, and not an auto-join group (those are joined
 	// automatically and are never selectable).
-	$allowed_statuses = bp_registration_groups_allowed_statuses();
-	$not_selectable   = array_merge(
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-	);
-	$valid_group_ids  = array();
-
-	foreach ( $group_ids as $group_id ) {
-		if ( in_array( $group_id, $not_selectable, true ) ) {
-			continue;
-		}
-
-		$group = groups_get_group( $group_id );
-
-		if ( ! empty( $group->id ) && in_array( $group->status, $allowed_statuses, true ) ) {
-			$valid_group_ids[] = $group_id;
-		}
-	}
+	$valid_group_ids = bp_registration_groups_get_valid_submitted_group_ids();
 
 	if ( ! empty( $valid_group_ids ) ) {
 		$usermeta['field_reg_groups'] = $valid_group_ids;
@@ -326,6 +480,35 @@ class BPRegistrationGroupsSettingsPage
   {
     add_action( 'admin_menu', array( $this, 'bp_registration_groups_add_plugin_page' ) );
     add_action( 'admin_init', array( $this, 'bp_registration_groups_page_init' ) );
+    add_action( 'admin_notices', array( $this, 'bp_registration_groups_require_selection_warning' ) );
+  }
+
+  /**
+   * Warn when "Require Group Selection" is enabled but no selectable groups
+   * exist. In that state the requirement is skipped at signup so registration
+   * is never blocked; this notice tells the admin the setting is idle.
+   */
+  public function bp_registration_groups_require_selection_warning()
+  {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return;
+		}
+
+		$screen = get_current_screen();
+
+		if ( empty( $screen->id ) || 'settings_page_bp-registration-groups-settings-admin' !== $screen->id ) {
+			return;
+		}
+
+		if ( ! bp_registration_groups_selection_required() || bp_registration_groups_has_selectable_groups() ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-warning"><p>%s</p></div>',
+			/* translators: warning shown on the plugin settings page when a group selection is required but no group can be selected on the registration form */
+			esc_html__( 'BP Registration Groups: "Require Group Selection" is enabled, but no selectable groups exist (every group is hidden, auto-join, or not visible on the registration form). The requirement is being skipped so registration is not blocked. Create or unhide a selectable group to enforce it.', 'buddypress-registration-groups-1' )
+		);
   }
 
   /**
@@ -440,6 +623,15 @@ class BPRegistrationGroupsSettingsPage
       'bp_registration_groups_display_options_section_id'
     );
 
+    add_settings_field(
+      'bp_registration_groups_require_selection',
+			/* translators: displays the title text for the "Require Group Selection" setting of the plugin admin page */
+			__('Require Group Selection', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_require_selection_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_display_options_section_id'
+    );
+
     add_settings_section(
       'bp_registration_groups_per_group_options_section_id',
 			/* translators: displays the section title for the per-group options on the plugin admin page */
@@ -494,6 +686,9 @@ class BPRegistrationGroupsSettingsPage
 
     if( isset( $input['bp_registration_groups_number_displayed'] ) )
         $new_input['bp_registration_groups_number_displayed'] = absint( $input['bp_registration_groups_number_displayed'] );
+
+    if( isset( $input['bp_registration_groups_require_selection'] ) )
+        $new_input['bp_registration_groups_require_selection'] = absint( $input['bp_registration_groups_require_selection'] );
 
     // per-group ID lists; absent keys mean no boxes were checked
     foreach ( array( 'bp_registration_groups_hidden_groups', 'bp_registration_groups_checked_groups', 'bp_registration_groups_autojoin_groups' ) as $id_list_key ) {
@@ -651,6 +846,35 @@ class BPRegistrationGroupsSettingsPage
 
 		/* translators: displays the help text for the "Number of Groups to Display" section of the plugin admin page */
 		echo '<br /><em>' . esc_html__('Default: 0 (show all groups)', 'buddypress-registration-groups-1') . '</em>';
+  }
+
+  /**
+   * Get the settings option array and print one of its values
+   */
+  public function bp_registration_groups_require_selection_callback()
+  {
+		$require_selection_options = array(
+			/* translators: displays the text "Yes" for the "Require Group Selection" setting of the plugin admin page */
+			'1' => __( 'Yes — registration cannot be completed without selecting at least one group', 'buddypress-registration-groups-1' ),
+			/* translators: displays the text "No (default)" for the "Require Group Selection" setting of the plugin admin page */
+			'0' => __( 'No (default)', 'buddypress-registration-groups-1' ),
+		);
+
+		$current = ( isset( $this->options['bp_registration_groups_require_selection'] ) && '1' == $this->options['bp_registration_groups_require_selection'] ) ? '1' : '0';
+
+		$rows = array();
+		foreach ( $require_selection_options as $value => $label ) {
+			$rows[] = sprintf(
+				'<label><input type="radio" %s name="bp_registration_groups_option_handle[bp_registration_groups_require_selection]" value="%s"> %s</label>',
+				checked( $current, $value, false ),
+				esc_attr( $value ),
+				esc_html( $label )
+			);
+		}
+		echo implode( '<br />', $rows ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rows are escaped above.
+
+		/* translators: displays the help text for the "Require Group Selection" setting of the plugin admin page */
+		echo '<br /><em>' . esc_html__( 'Validated when the signup form is submitted. Hidden and auto-join groups do not count. If no selectable groups exist, the requirement is skipped so registration is never blocked.', 'buddypress-registration-groups-1' ) . '</em>';
   }
 
   /**
