@@ -160,6 +160,7 @@ Changelog
 * The registrant's group selections are now preserved when signup validation fails for any reason (previously the list reset to the admin defaults).
 * If the requirement is enabled but no selectable groups exist, it is skipped so registration is never blocked, and a warning is shown on the plugin settings page.
 * Added a regression test suite for the signup validation, signup meta, and group eligibility logic (see the Tests section above).
+* Refreshed the admin settings screenshot to include the new setting and added a sixth screenshot showing the inline error in action.
 
 ### 1.3.0
 * Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4, on both single site and multisite.

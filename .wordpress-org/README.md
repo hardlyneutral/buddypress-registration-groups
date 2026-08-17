@@ -15,7 +15,7 @@ cd svn && svn add --force assets && svn ci -m "Update plugin icon and screenshot
 
 - `icon.svg` — source artwork; wordpress.org serves SVG icons directly.
 - `icon-256x256.png` / `icon-128x128.png` — raster fallbacks.
-- `screenshot-1.png` … `screenshot-5.png` — directory screenshots; their
+- `screenshot-1.png` … `screenshot-6.png` — directory screenshots; their
   captions come from the numbered list in the `== Screenshots ==` section of
   `readme.txt`. Screenshots were moved here from the plugin root as of 1.3.0,
   so they no longer bloat the download zip. Remove any old
