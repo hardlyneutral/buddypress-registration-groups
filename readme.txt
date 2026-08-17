@@ -5,7 +5,7 @@ Tags: buddypress, groups, registration, autojoin, multisite
 Requires at least: 6.1
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,11 @@ displayed, and how many groups will be visible.
 Per-group options let you fine-tune individual groups: hide a group from the registration form, pre-check a group
 by default, or mark a group as auto-join so every new user becomes a member automatically. Auto-join groups can be
 left off the form entirely or shown as pre-checked, locked entries labeled "(automatic)".
+
+An optional "Require Group Selection" setting (off by default) prevents signup from completing until the registrant
+selects at least one group. The requirement is validated on the server when the form is submitted, works with both
+checkbox and radio button display modes, and is skipped automatically if no selectable groups exist so registration
+is never blocked by a misconfiguration.
 
 Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
@@ -126,6 +131,13 @@ Yes! You can toggle private group visibility on and off in the admin section
 
 No. Hidden groups are never displayed on the registration form. If you mark a hidden group as auto-join in the per-group options, new users join it silently at activation — its name is still never shown on the form.
 
+= Can I require new users to select a group? =
+
+Yes. Enable "Require Group Selection" on the plugin settings page. Signup then cannot be completed until the
+registrant selects at least one group offered on the form; an inline error appears next to the group list otherwise.
+Hidden and auto-join groups do not count toward the requirement. If no selectable groups exist, the requirement is
+skipped (and a warning is shown on the settings page) so registration is never locked.
+
 = What if the plugin doesn't work? =
 
 Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
@@ -142,6 +154,13 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 5. Per-group options in action: an auto-join group shown as a locked "(automatic)" entry and a group checked by default.
 
 == Changelog ==
+= 1.4.0 =
+* New: "Require Group Selection" setting (off by default). When enabled, signup cannot be completed until the registrant selects at least one group, validated server-side on the BuddyPress signup flow (single site and multisite). Requested in the wordpress.org support forum.
+* An accessible inline error is shown next to the group list when the requirement is not met, and hidden, private (when not shown), nonexistent, and auto-join group IDs never satisfy it.
+* The registrant's group selections are now preserved when signup validation fails for any reason (previously the list reset to the admin defaults).
+* If the requirement is enabled but no selectable groups exist, it is skipped so registration is never blocked, and a warning is shown on the plugin settings page.
+* Added a regression test suite for the signup validation, signup meta, and group eligibility logic (in the tests directory of the source repository; not shipped in the plugin zip).
+
 = 1.3.0 =
 * Compatibility release. Tested as working with WordPress 7.0, BuddyPress 14.5, and PHP 8.4, on both single site and multisite.
 * New: per-group options. Hide individual groups from the registration form, pre-check groups by default, or mark groups as auto-join so every new user becomes a member automatically at activation. Auto-join groups can be left off the form or shown as pre-checked, locked entries labeled "(automatic)".
@@ -258,6 +277,9 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * First version!
 
 == Upgrade Notice ==
+
+= 1.4.0 =
+* Adds the optional "Require Group Selection" setting and preserves group selections when signup validation fails. No behavior changes unless the new setting is enabled. Safe to upgrade.
 
 = 1.3.0 =
 * Major compatibility release for current WordPress and BuddyPress. Fixes group joining on single-site installs, which had been broken since BuddyPress 14. Upgrade immediately.
