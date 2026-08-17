@@ -152,6 +152,13 @@ php tests/run-tests.php
 
 The tests directory is part of the source repository only and does not ship in the plugin zip.
 
+Development sandbox
+-------------------
+`.claude/skills/wp-sandbox/SKILL.md` documents how to stand up a throwaway WordPress + BuddyPress install
+(PHP built-in server + SQLite, no MySQL) for live end-to-end verification of the signup flow and for
+capturing the wordpress.org screenshots in `.wordpress-org/`. Like `tests/` and `.wordpress-org/`, the
+`.claude` directory is part of the source repository only and does not ship in the plugin zip.
+
 Changelog
 ---------
 ### 1.4.0
