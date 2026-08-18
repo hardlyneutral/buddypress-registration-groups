@@ -100,7 +100,15 @@ Remember the `src/` layout: some BP files referenced later live under
 
 ## Step 4 — SQLite drop-in (replaces MySQL)
 
-Source: `WordPress/sqlite-database-integration` at a release tag.
+**Path A:** grab the official release zip — it has none of the repo traps
+below:
+
+```bash
+curl -sSLo sqlite.zip https://downloads.wordpress.org/plugin/sqlite-database-integration.zip
+unzip -q sqlite.zip -d wp/wp-content/plugins/
+```
+
+**Path B:** `WordPress/sqlite-database-integration` at a release tag.
 
 **Monorepo trap:** inside the repo, the plugin's `wp-includes/database`
 directory is a **symlink** to `packages/mysql-on-sqlite/src/`. Only official
@@ -121,16 +129,19 @@ ls "$PLUG/wp-includes/database/" | head
 ```
 
 Then wire the drop-in. The plugin ships a `db.copy` template meant to be
-copied to `wp-content/db.php` with its `{…}` placeholders substituted. Open
-`db.copy` and check which placeholders your version uses, then substitute the
-real paths — recent versions use a single `{SQLITE_MAIN_FILE}` (path to the
-plugin's `load.php`); older ones use `{SQLITE_IMPLEMENTATION_FOLDER_PATH}`
-(the `wp-includes/database` dir) and `{SQLITE_PLUGIN}`
-(`sqlite-database-integration/load.php`):
+copied to `wp-content/db.php` with its `{…}` placeholders substituted.
+**Read `db.copy` first and check how each placeholder is used** — the
+meaning has shifted across versions. In the plugin 3.x era,
+`{SQLITE_IMPLEMENTATION_FOLDER_PATH}` must be the **plugin root** directory
+(the generated code appends `/wp-includes/sqlite/db.php` to it); in older
+2.x templates the same placeholder meant the `wp-includes/database` dir, and
+some versions use `{SQLITE_MAIN_FILE}` (path to the plugin's `load.php`)
+instead. Getting it wrong fails with "Error establishing a database
+connection" at install time. For the current (3.x) template:
 
 ```bash
 sed -e "s#{SQLITE_MAIN_FILE}#$PWD/$PLUG/load.php#" \
-    -e "s#{SQLITE_IMPLEMENTATION_FOLDER_PATH}#$PWD/$PLUG/wp-includes/database#" \
+    -e "s#{SQLITE_IMPLEMENTATION_FOLDER_PATH}#$PWD/$PLUG#" \
     -e "s#{SQLITE_PLUGIN}#sqlite-database-integration/load.php#" \
     "$PLUG/db.copy" > wp/wp-content/db.php
 ```
@@ -174,6 +185,14 @@ require_once $schema;
 $components = array( "members" => 1, "xprofile" => 1, "settings" => 1, "groups" => 1, "activity" => 1, "notifications" => 1 );
 bp_update_option( "bp-active-components", $components );
 bp_core_install( $components );
+// CRITICAL: pin the BP version options. Without these, the FIRST visit to
+// wp-admin (e.g. logging in for the settings screenshot) fires BP'"'"'s
+// version updater on admin_init, which resets bp-active-components to the
+// defaults — silently disabling Groups. Everything then half-breaks:
+// the groups section vanishes from /register/, plugin functions are
+// undefined under wp-cli, and signups sail past the plugin'"'"'s validation.
+bp_update_option( "_bp_version", bp_get_version() );
+bp_update_option( "_bp_db_version", bp_get_db_version() );
 update_option( "users_can_register", 1 );
 update_option( "permalink_structure", "/%postname%/" );
 flush_rewrite_rules();
@@ -182,6 +201,8 @@ flush_rewrite_rules();
 
 Sanity check: `WP db query` is unavailable under SQLite, so verify via BP
 itself, e.g. `WP eval 'var_dump( function_exists("groups_create_group") && bp_is_active("groups") );'`.
+Re-run that check after any wp-admin browsing session; if Groups came back
+disabled, the version pin above was missed.
 
 ## Step 7 — sample data and plugin presets (screenshot set)
 
@@ -195,6 +216,7 @@ $names = array( "Announcements", "Book Club", "Cooking", "Cycling", "Gardening",
 $ids = array();
 foreach ( $names as $name ) {
   $ids[ $name ] = groups_create_group( array(
+    "creator_id" => 1, // REQUIRED under wp-cli: no logged-in user, so omitting it returns false and creates nothing
     "name" => $name, "slug" => sanitize_title( $name ),
     "description" => $name . " group", "status" => "public",
   ) );
@@ -234,9 +256,17 @@ $_SERVER['SCRIPT_NAME'] = '/index.php';
 require $root . '/index.php';
 ```
 
+Serve with the **docroot set to `wp/`** — without `-t wp`, the router's
+`return false` branch resolves static files against the scratch dir instead,
+so every CSS/JS asset and `wp-login.php` 404s. Pages still render (via
+`index.php`), which makes the breakage easy to miss until screenshots come
+out unstyled or the admin login "doesn't exist":
+
 ```bash
-php -S 127.0.0.1:8080 router.php >server.log 2>&1 &
+php -S 127.0.0.1:8080 -t wp router.php >server.log 2>&1 &
 curl -s http://127.0.0.1:8080/register/ | grep -q registration-groups-section && echo OK
+# also confirm statics are actually served:
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/wp-login.php   # expect 200
 ```
 
 Watch `server.log` for PHP notices/warnings from the plugin — a clean log is
@@ -262,6 +292,26 @@ Also verify the negative paths relevant to the change (e.g. with
 `require_selection` on, an empty submission must re-render with the inline
 `role="alert"` error and preserved selections).
 
+Playwright specifics for the BP Nouveau register form (all learned the hard
+way):
+
+- Field selectors: `#signup_username`, `#signup_email`, but the passwords
+  are `#pass1` / `#pass2` (their `name` attributes are `signup_password` /
+  `signup_password_confirm`). `#pass2` can be hidden by WP's password UI —
+  fill it only `if (await page.locator('#pass2').isVisible())`; a strong
+  password submits fine without it.
+- The default install puts a **required xprofile "Name" field** (`#field_1`)
+  on the form; leaving it empty silently re-renders instead of registering.
+- After clicking `[name="signup_submit"]`, always
+  `await page.waitForLoadState('networkidle')` before asserting — otherwise
+  assertions race the navigation and read the pre-submit DOM.
+- Use a fresh username per submission attempt, and clear leftovers between
+  negative tests — a pending signup reserves its username/email and later
+  runs fail with "Sorry, that username already exists!":
+  `WP eval '$s = BP_Signup::get( array( "number" => 50 ) ); foreach ( $s["signups"] as $x ) { BP_Signup::delete( array( $x->signup_id ) ); }'`
+- `sh: 1: /usr/sbin/sendmail: not found` on activation is harmless — there
+  is no mailer in the container.
+
 ## Screenshot conventions (wordpress.org set)
 
 Captures go to `.wordpress-org/screenshot-N.png`; captions live in the
@@ -273,25 +323,39 @@ Fixed conventions, matching the published set:
   `chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })` — never
   `playwright install`.
 - `deviceScaleFactor: 2` everywhere (output px = 2 × CSS px).
-- **Registration-form shots (1, 2, 3, 5, 6):** logged-out visit to
+- **Registration-form shots (1, 2, 3, 5, 6, 7):** logged-out visit to
   `/register/`, clip a **701-CSS-px-wide** region (→ 1402 px output) framing
   the groups section plus a sliver of the password field above and the
-  Complete Sign Up button below. Heights vary by content; keep them in the
-  roughly 750–960 CSS px range of the existing set.
+  Complete Sign Up button below. A working clip: with `g` = bounding box of
+  `#registration-groups-section` and `s` = the submit button's box, use
+  `{ x: g.x - 30, y: g.y - 45, width: 701, height: (s.y + 12) - (g.y - 45) }`.
+  Pass **`fullPage: true` alongside `clip`** — without it the clip is
+  intersected with the viewport and a form below the fold captures a ~60-px
+  sliver. Heights vary by content (the published set spans roughly 750–1200
+  output px).
 - **Settings shot (4):** log in, open
-  `wp-admin/options-general.php?page=bp-registration-groups`, element
-  screenshot of `.wrap` sized to **1078 CSS px wide** (→ 2156 px output).
+  `wp-admin/options-general.php?page=bp-registration-groups-settings-admin`,
+  element screenshot of `.wrap`; at a 1280-CSS-px viewport `.wrap` comes out
+  exactly **1078 CSS px wide** (→ 2156 px output).
 
-Per-shot state (everything else stays at the Step 7 baseline):
+The sections preset used by shots 4 and 7 (`bp_registration_groups_sections`
+inside the option handle): section 1 "Interests" / "Pick one or more areas
+of interest" with Book Club, Cooking, Gardening, Yoga; section 2
+"Activities" / "Which activities would you like to join?" with Cycling,
+Swimming, Trail Runners.
+
+Per-shot state (everything else stays at the Step 7 baseline, which includes
+**no** `bp_registration_groups_sections` key):
 
 | # | Shows | Settings |
 |---|-------|----------|
 | 1 | Checkbox list | `display_as=1`; per-group lists emptied (all 8 plain, unchecked) |
 | 2 | Scrollable multiselect | `display_as=2`; per-group lists emptied |
 | 3 | Radio buttons | `display_as=3`; per-group lists emptied |
-| 4 | Admin settings page | `display_as=1`, `require_selection=1`, `autojoin_display=1`, baseline per-group rows (Announcements auto-join, Book Club checked) |
+| 4 | Admin settings page | `display_as=1`, `require_selection=1`, `autojoin_display=1`, baseline per-group rows (Announcements auto-join, Book Club checked), plus the two-section preset above so the Group Sections editor shows real content |
 | 5 | Per-group options live | `display_as=1`, `autojoin_display=1` → Announcements as locked "(automatic)", Book Club pre-checked |
-| 6 | Required-selection error | `display_as=1`, `require_selection=1`, `autojoin_display=0` (7 groups, no Announcements); submit with nothing selected, capture the re-render with the inline error |
+| 6 | Required-selection error | `display_as=1`, `require_selection=1`, `autojoin_display=0` (7 groups, no Announcements); submit valid account details with nothing selected (uncheck the Book Club default first), capture the re-render with the inline error |
+| 7 | Group Sections live | `display_as=1`, baseline per-group rows, plus the two-section preset above → "Interests" and "Activities" render as separate titled sections, Book Club pre-checked |
 
 After capturing, verify dimensions match the set
 (`file .wordpress-org/screenshot-*.png` — 1402-wide form shots, 2156-wide

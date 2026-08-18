@@ -172,8 +172,9 @@ Use the WordPress plugin [support form here](http://wordpress.org/support/plugin
 
 Tests
 -----
-The `tests` directory contains a dependency-free regression suite for the signup validation, signup meta, and
-group eligibility logic. It stubs the small slice of WordPress/BuddyPress the plugin touches, so it runs with
+The `tests` directory contains a dependency-free regression suite for the signup validation, signup meta,
+group eligibility, and curated Group Sections logic (rendering, radio/checkbox behavior across sections, and
+settings sanitization). It stubs the small slice of WordPress/BuddyPress the plugin touches, so it runs with
 nothing but PHP:
 
 ```
