@@ -174,6 +174,13 @@ section that lists it wins). Checkboxes allow any number of selections across se
 one selection per section. Selections from every section are combined and joined at activation, and the per-group
 Hide, Checked by default, and Auto-join settings still apply.
 
+= Does "Number of Groups to Display" limit which groups can be joined? =
+
+No — it only trims how many groups the form shows. With the Active, Popular, and Random display orders the visible
+subset changes between page loads, so the limit is not treated as an eligibility rule when a signup is validated.
+To make a specific group unselectable at registration, use the per-group Hide option (or leave it out of every
+Group Section).
+
 = What if the plugin doesn't work? =
 
 Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)

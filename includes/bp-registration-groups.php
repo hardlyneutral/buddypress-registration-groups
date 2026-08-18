@@ -149,8 +149,23 @@ function bp_registration_groups_get_submitted_group_ids() {
 		return array();
 	}
 
+	$group_ids = array();
+
+	// The form's own inputs only ever submit plain digit strings, so accept
+	// exactly that (plus genuine ints, in case another plugin filtered the
+	// value). Anything else — nested arrays, negatives, floats — is a forged
+	// payload; dropping it here avoids absint() coercing it into an
+	// unrelated group ID (an array casts to 1, '-4' flips to 4).
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing
-	return array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['field_reg_groups'] ) ) ) ) );
+	foreach ( (array) wp_unslash( $_POST['field_reg_groups'] ) as $value ) {
+		if ( is_int( $value ) && $value > 0 ) {
+			$group_ids[] = $value;
+		} elseif ( is_string( $value ) && ctype_digit( $value ) && (int) $value > 0 ) {
+			$group_ids[] = (int) $value;
+		}
+	}
+
+	return array_values( array_unique( $group_ids ) );
 }
 
 /**
@@ -160,6 +175,12 @@ function bp_registration_groups_get_submitted_group_ids() {
 * exists, has an allowed status, is not hidden per-group, is not an
 * auto-join group (those are joined automatically and are never selectable),
 * and — when curated sections are configured — is assigned to a section.
+*
+* The "Number of Groups to Display" limit is deliberately NOT enforced here:
+* it trims how many groups the form shows, but with the active/popular/random
+* orders the displayed subset changes between page loads, so treating it as
+* an eligibility rule would reject legitimate selections. Use the per-group
+* Hide option (or sections) to make a specific group unselectable.
 */
 function bp_registration_groups_get_valid_submitted_group_ids() {
 	$group_ids = bp_registration_groups_get_submitted_group_ids();
@@ -899,8 +920,12 @@ class BPRegistrationGroupsSettingsPage
         $new_input['bp_registration_groups_display_order'] = in_array( $display_order, array( 'active', 'newest', 'popular', 'random', 'alphabetical' ), true ) ? $display_order : 'alphabetical';
     }
 
-		if( isset( $input['bp_registration_groups_display_as'] ) )
-        $new_input['bp_registration_groups_display_as'] = absint( $input['bp_registration_groups_display_as'] );
+		if( isset( $input['bp_registration_groups_display_as'] ) ) {
+        // only the values the Display As radios actually post; anything else
+        // (including absint-coercible junk like '-3') falls back to the default
+        $display_as = is_scalar( $input['bp_registration_groups_display_as'] ) ? (string) $input['bp_registration_groups_display_as'] : '';
+        $new_input['bp_registration_groups_display_as'] = in_array( $display_as, array( '1', '2', '3' ), true ) ? (int) $display_as : 2;
+    }
 
     if( isset( $input['bp_registration_groups_show_private_groups'] ) )
         $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
