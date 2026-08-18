@@ -55,6 +55,64 @@ function bp_registration_groups_get_id_list_option( $key ) {
 }
 
 /**
+* bp_registration_groups_get_sections()
+*
+* The ordered, curated group sections the site owner configured, as a clean
+* list of arrays with 'title', 'description', and 'groups' (group IDs) keys.
+* Returns an empty array when no sections are configured, which means the
+* registration form renders the single global section exactly as it always
+* has.
+*/
+function bp_registration_groups_get_sections() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	if ( empty( $options['bp_registration_groups_sections'] ) || ! is_array( $options['bp_registration_groups_sections'] ) ) {
+		return array();
+	}
+
+	$sections = array();
+
+	foreach ( $options['bp_registration_groups_sections'] as $section ) {
+		if ( ! is_array( $section ) ) {
+			continue;
+		}
+
+		$title       = isset( $section['title'] ) ? trim( (string) $section['title'] ) : '';
+		$description = isset( $section['description'] ) ? trim( (string) $section['description'] ) : '';
+		$group_ids   = ( isset( $section['groups'] ) && is_array( $section['groups'] ) ) ? array_values( array_unique( array_filter( array_map( 'absint', $section['groups'] ) ) ) ) : array();
+
+		if ( '' === $title && '' === $description && empty( $group_ids ) ) {
+			continue;
+		}
+
+		$sections[] = array(
+			'title'       => $title,
+			'description' => $description,
+			'groups'      => $group_ids,
+		);
+	}
+
+	return $sections;
+}
+
+/**
+* bp_registration_groups_get_section_group_ids()
+*
+* The union of the group IDs assigned to any configured section. When
+* sections are configured, only these groups are offered on the registration
+* form; groups left out of every section do not appear.
+*/
+function bp_registration_groups_get_section_group_ids() {
+	$group_ids = array();
+
+	foreach ( bp_registration_groups_get_sections() as $section ) {
+		$group_ids = array_merge( $group_ids, $section['groups'] );
+	}
+
+	return array_values( array_unique( $group_ids ) );
+}
+
+/**
 * bp_registration_groups_autojoin_shows_locked()
 *
 * Whether auto-join groups appear on the registration form as pre-checked,
@@ -99,8 +157,9 @@ function bp_registration_groups_get_submitted_group_ids() {
 * bp_registration_groups_get_valid_submitted_group_ids()
 *
 * The submitted group IDs the registration form actually offers: the group
-* exists, has an allowed status, is not hidden per-group, and is not an
-* auto-join group (those are joined automatically and are never selectable).
+* exists, has an allowed status, is not hidden per-group, is not an
+* auto-join group (those are joined automatically and are never selectable),
+* and — when curated sections are configured — is assigned to a section.
 */
 function bp_registration_groups_get_valid_submitted_group_ids() {
 	$group_ids = bp_registration_groups_get_submitted_group_ids();
@@ -114,10 +173,16 @@ function bp_registration_groups_get_valid_submitted_group_ids() {
 		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
 		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
 	);
+	$sections_active  = ! empty( bp_registration_groups_get_sections() );
+	$section_ids      = $sections_active ? bp_registration_groups_get_section_group_ids() : array();
 	$valid_group_ids  = array();
 
 	foreach ( $group_ids as $group_id ) {
 		if ( in_array( $group_id, $not_selectable, true ) ) {
+			continue;
+		}
+
+		if ( $sections_active && ! in_array( $group_id, $section_ids, true ) ) {
 			continue;
 		}
 
@@ -144,6 +209,24 @@ function bp_registration_groups_has_selectable_groups() {
 		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
 		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
 	);
+
+	// When curated sections are configured, only groups assigned to a
+	// section are offered, so selectability is decided over that set alone.
+	if ( ! empty( bp_registration_groups_get_sections() ) ) {
+		foreach ( bp_registration_groups_get_section_group_ids() as $section_group_id ) {
+			if ( in_array( $section_group_id, $excluded_ids, true ) ) {
+				continue;
+			}
+
+			$section_group = groups_get_group( $section_group_id );
+
+			if ( ! empty( $section_group->id ) && in_array( $section_group->status, $allowed_statuses, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	$query_args = array(
 		'type'        => 'alphabetical',
@@ -334,6 +417,63 @@ function bp_registration_groups() {
 		}
 	}
 
+	// Curated sections: when at least one section is configured, the form
+	// renders each section with its own heading, description, and assigned
+	// groups instead of the single global list. Only groups assigned to a
+	// section appear, each at most once (the first section that lists a group
+	// keeps it), and the same eligibility rules apply as in the global list:
+	// per-group hidden and disallowed-status groups are skipped, and
+	// auto-join groups appear only as locked entries when that display is on
+	// (never when the group's status is hidden).
+	$bp_registration_groups_sections     = bp_registration_groups_get_sections();
+	$bp_registration_groups_sections_out = array();
+	if ( ! empty( $bp_registration_groups_sections ) ) {
+		$bp_registration_groups_rendered_ids = array();
+
+		foreach ( $bp_registration_groups_sections as $bp_registration_groups_section ) {
+			$bp_registration_groups_section_entries = array();
+
+			foreach ( $bp_registration_groups_section['groups'] as $bp_registration_groups_section_group_id ) {
+				if ( in_array( $bp_registration_groups_section_group_id, $bp_registration_groups_rendered_ids, true )
+					|| in_array( $bp_registration_groups_section_group_id, $bp_registration_groups_hidden_ids, true ) ) {
+					continue;
+				}
+
+				$bp_registration_groups_section_group = groups_get_group( $bp_registration_groups_section_group_id );
+
+				if ( empty( $bp_registration_groups_section_group->id ) ) {
+					continue;
+				}
+
+				if ( in_array( $bp_registration_groups_section_group_id, $bp_registration_groups_autojoin_ids, true ) ) {
+					if ( bp_registration_groups_autojoin_shows_locked() && 'hidden' !== $bp_registration_groups_section_group->status ) {
+						$bp_registration_groups_section_entries[] = array(
+							'group'  => $bp_registration_groups_section_group,
+							'locked' => true,
+						);
+						$bp_registration_groups_rendered_ids[]    = $bp_registration_groups_section_group_id;
+					}
+					continue;
+				}
+
+				if ( ! in_array( $bp_registration_groups_section_group->status, $bp_registration_groups_show_statuses, true ) ) {
+					continue;
+				}
+
+				$bp_registration_groups_section_entries[] = array(
+					'group'  => $bp_registration_groups_section_group,
+					'locked' => false,
+				);
+				$bp_registration_groups_rendered_ids[]    = $bp_registration_groups_section_group_id;
+			}
+
+			if ( ! empty( $bp_registration_groups_section_entries ) ) {
+				$bp_registration_groups_section['entries'] = $bp_registration_groups_section_entries;
+				$bp_registration_groups_sections_out[]     = $bp_registration_groups_section;
+			}
+		}
+	}
+
 	/* list groups */ ?>
 		<div class="register-section" id="registration-groups-section">
 			<h4 class="reg_groups_title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
@@ -341,6 +481,63 @@ function bp_registration_groups() {
 			<?php if ( '' !== $bp_registration_groups_error ) : ?>
 			<div id="reg-groups-error" class="error reg_groups_error" role="alert"><?php echo esc_html( $bp_registration_groups_error ); ?></div>
 			<?php endif; ?>
+			<?php if ( ! empty( $bp_registration_groups_sections ) ) : ?>
+			<?php if ( ! empty( $bp_registration_groups_sections_out ) ) : $i = 0; ?>
+			<?php foreach ( $bp_registration_groups_sections_out as $bp_registration_groups_section_index => $bp_registration_groups_section ) : ?>
+			<div class="reg_groups_section">
+				<?php if ( '' !== $bp_registration_groups_section['title'] ) : ?>
+				<h5 class="reg_groups_section_title"><?php echo esc_html( $bp_registration_groups_section['title'] ); ?></h5>
+				<?php endif; ?>
+				<?php if ( '' !== $bp_registration_groups_section['description'] ) : ?>
+				<p class="reg_groups_section_description"><?php echo esc_html( $bp_registration_groups_section['description'] ); ?></p>
+				<?php endif; ?>
+				<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
+					<?php
+					// In radio mode each section is its own radio group: the
+					// inputs share a per-section name, so the registrant can
+					// select one group in every section. Checkboxes share the
+					// global name and allow any number of selections.
+					$bp_registration_groups_input_name     = ( 'radio' === $bp_registration_groups_input_type ) ? 'field_reg_groups[' . $bp_registration_groups_section_index . ']' : 'field_reg_groups[]';
+					$bp_registration_groups_default_checked = false;
+					?>
+					<?php foreach ( $bp_registration_groups_section['entries'] as $bp_registration_groups_entry ) : ?>
+						<?php if ( $bp_registration_groups_entry['locked'] ) : ?>
+						<li class="reg_groups_item reg_groups_item_locked">
+							<input class="reg_groups_group_checkbox" type="checkbox" id="field_reg_groups_auto_<?php echo esc_attr( $bp_registration_groups_entry['group']->id ); ?>" checked="checked" disabled="disabled" /><label class="reg_groups_group_label" for="field_reg_groups_auto_<?php echo esc_attr( $bp_registration_groups_entry['group']->id ); ?>"><?php echo esc_html( $bp_registration_groups_entry['group']->name ); ?> <em class="reg_groups_automatic"><?php
+							/* translators: label shown next to groups that every new user joins automatically */
+							esc_html_e( '(automatic)', 'buddypress-registration-groups-1' );
+							?></em></label>
+						</li>
+						<?php else : ?>
+						<?php
+						// Pre-check groups the admin marked as checked by
+						// default (or, on a signup re-render, the registrant's
+						// submitted selections); in radio mode only the first
+						// per section is checked.
+						$bp_registration_groups_is_checked = in_array( absint( $bp_registration_groups_entry['group']->id ), $bp_registration_groups_checked_ids, true )
+							&& ( 'radio' !== $bp_registration_groups_input_type || ! $bp_registration_groups_default_checked );
+						if ( $bp_registration_groups_is_checked ) {
+							$bp_registration_groups_default_checked = true;
+						}
+						?>
+						<li class="reg_groups_item">
+							<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="<?php echo esc_attr( $bp_registration_groups_input_name ); ?>" value="<?php echo esc_attr( $bp_registration_groups_entry['group']->id ); ?>"<?php checked( $bp_registration_groups_is_checked ); ?> /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( $bp_registration_groups_entry['group']->name ); ?></label>
+						</li>
+						<?php $i++; ?>
+						<?php endif; ?>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+			<?php endforeach; ?>
+			<?php else : ?>
+			<p class="reg_groups_none">
+				<?php
+				/* translators: text that is displayed on the buddypress user registration form when there are no groups that can be displayed */
+				esc_html_e( 'No groups are available at this time.', 'buddypress-registration-groups-1' );
+				?>
+			</p>
+			<?php endif; ?>
+			<?php else : ?>
 			<?php $bp_registration_groups_has_groups = bp_has_groups( $bp_registration_groups_query_args ); ?>
 			<?php if ( $bp_registration_groups_has_groups || ! empty( $bp_registration_groups_locked_groups ) ) : ?>
 			<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
@@ -383,6 +580,7 @@ function bp_registration_groups() {
 				esc_html_e( 'No groups are available at this time.', 'buddypress-registration-groups-1' );
 				?>
 			</p>
+			<?php endif; ?>
 			<?php endif; ?>
 		</div>
 <?php }
@@ -431,11 +629,17 @@ function bp_registration_groups_join( $user_id, $key = '', $user = false ) {
 	// activations cannot join groups the registration form no longer offers.
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
 	$hidden_group_ids = bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' );
+	$sections_active  = ! empty( bp_registration_groups_get_sections() );
+	$section_ids      = $sections_active ? bp_registration_groups_get_section_group_ids() : array();
 
 	foreach ( $selected_group_ids as $group_id ) {
 		$group_id = absint( $group_id );
 
 		if ( ! $group_id || in_array( $group_id, $hidden_group_ids, true ) ) {
+			continue;
+		}
+
+		if ( $sections_active && ! in_array( $group_id, $section_ids, true ) ) {
 			continue;
 		}
 
@@ -657,6 +861,23 @@ class BPRegistrationGroupsSettingsPage
       'bp-registration-groups-settings-admin',
       'bp_registration_groups_per_group_options_section_id'
     );
+
+    add_settings_section(
+      'bp_registration_groups_sections_section_id',
+			/* translators: displays the section title for the curated group sections options on the plugin admin page */
+			__('Group Sections', 'buddypress-registration-groups-1'),
+      array( $this, 'print_sections_section_info' ),
+      'bp-registration-groups-settings-admin'
+    );
+
+    add_settings_field(
+      'bp_registration_groups_sections',
+			/* translators: displays the title text for the curated group sections editor on the plugin admin page */
+			__('Sections', 'buddypress-registration-groups-1'),
+      array( $this, 'bp_registration_groups_sections_callback' ),
+      'bp-registration-groups-settings-admin',
+      'bp_registration_groups_sections_section_id'
+    );
   }
 
   /**
@@ -699,6 +920,52 @@ class BPRegistrationGroupsSettingsPage
 
     if( isset( $input['bp_registration_groups_autojoin_display'] ) )
         $new_input['bp_registration_groups_autojoin_display'] = absint( $input['bp_registration_groups_autojoin_display'] );
+
+    // curated group sections: clean each row, drop removed and empty rows
+    // (the blank "add a new section" row submits empty), order by the
+    // requested position (stable on the submitted order), and keep a group
+    // in only the first section that lists it
+    if ( isset( $input['bp_registration_groups_sections'] ) && is_array( $input['bp_registration_groups_sections'] ) ) {
+        $sections  = array();
+        $submitted = 0;
+
+        foreach ( $input['bp_registration_groups_sections'] as $section ) {
+            $submitted++;
+
+            if ( ! is_array( $section ) || ! empty( $section['remove'] ) ) {
+                continue;
+            }
+
+            $title       = isset( $section['title'] ) ? sanitize_text_field( $section['title'] ) : '';
+            $description = isset( $section['description'] ) ? sanitize_text_field( $section['description'] ) : '';
+            $group_ids   = ( isset( $section['groups'] ) && is_array( $section['groups'] ) ) ? array_values( array_unique( array_filter( array_map( 'absint', $section['groups'] ) ) ) ) : array();
+
+            if ( '' === $title && '' === $description && empty( $group_ids ) ) {
+                continue;
+            }
+
+            $sections[] = array(
+                'position'    => ( isset( $section['position'] ) && absint( $section['position'] ) > 0 ) ? absint( $section['position'] ) : $submitted,
+                'submitted'   => $submitted,
+                'title'       => $title,
+                'description' => $description,
+                'groups'      => $group_ids,
+            );
+        }
+
+        usort( $sections, function ( $a, $b ) {
+            return ( $a['position'] === $b['position'] ) ? $a['submitted'] - $b['submitted'] : $a['position'] - $b['position'];
+        } );
+
+        $assigned_group_ids = array();
+        foreach ( $sections as $index => $section ) {
+            $sections[ $index ]['groups'] = array_values( array_diff( $section['groups'], $assigned_group_ids ) );
+            $assigned_group_ids           = array_merge( $assigned_group_ids, $sections[ $index ]['groups'] );
+            unset( $sections[ $index ]['position'], $sections[ $index ]['submitted'] );
+        }
+
+        $new_input['bp_registration_groups_sections'] = array_values( $sections );
+    }
 
     return $new_input;
   }
@@ -984,6 +1251,110 @@ class BPRegistrationGroupsSettingsPage
 			);
 		}
 		echo implode( '<br />', $rows ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- rows are escaped above.
+  }
+
+  /**
+   * Print the curated group sections section text
+   */
+  public function print_sections_section_info()
+  {
+		/* translators: displays the help text for the "Group Sections" section of the plugin admin page */
+		esc_html_e( 'Optionally organize the registration form into multiple titled sections (for example "Interests" and "Regions"), each offering only the groups you assign to it. While at least one section exists, the form shows only assigned groups, in the section order below; a group assigned to more than one section stays in the first section that lists it. With the Radio Buttons display, registrants can select one group per section. The per-group Hide, Checked by default, and Auto-join settings above still apply, and the "Number of Groups to Display" limit is ignored. Leave all sections empty to keep the single global list.', 'buddypress-registration-groups-1' );
+  }
+
+  /**
+   * Render the curated group sections editor: every saved section plus one
+   * blank row for adding a new section. Sections are reordered with the
+   * Position number and removed with the Remove checkbox; both take effect
+   * when the settings are saved.
+   */
+  public function bp_registration_groups_sections_callback()
+  {
+		$groups = groups_get_groups( array(
+			'type'        => 'alphabetical',
+			'show_hidden' => true,
+			'per_page'    => null,
+			'page'        => null,
+		) );
+		$groups = ! empty( $groups['groups'] ) ? $groups['groups'] : array();
+
+		$sections    = bp_registration_groups_get_sections();
+		$saved_count = count( $sections );
+
+		// one blank trailing row to add a new section
+		$sections[] = array( 'title' => '', 'description' => '', 'groups' => array() );
+
+		foreach ( $sections as $index => $section ) {
+			$is_new = $index >= $saved_count;
+			$legend = $is_new
+				/* translators: legend of the blank row used to add a new group section on the plugin admin page */
+				? __( 'Add a new section', 'buddypress-registration-groups-1' )
+				/* translators: %d: section position. Legend of an existing group section row on the plugin admin page */
+				: sprintf( __( 'Section %d', 'buddypress-registration-groups-1' ), $index + 1 );
+
+			echo '<fieldset style="border: 1px solid #c3c4c7; background: #fff; padding: 8px 12px 12px; margin: 0 0 12px; max-width: 640px;">';
+			echo '<legend style="font-weight: 600; padding: 0 4px;">' . esc_html( $legend ) . '</legend>';
+
+			printf(
+				'<p><label>%1$s <input type="number" min="1" step="1" style="width: 5em;" name="bp_registration_groups_option_handle[bp_registration_groups_sections][%2$d][position]" value="%3$d" /></label></p>',
+				/* translators: label of the ordering field of a group section row on the plugin admin page */
+				esc_html__( 'Position', 'buddypress-registration-groups-1' ),
+				$index,
+				$index + 1
+			);
+
+			printf(
+				'<p><label>%1$s<br /><input type="text" class="regular-text" name="bp_registration_groups_option_handle[bp_registration_groups_sections][%2$d][title]" value="%3$s" /></label></p>',
+				/* translators: label of the title field of a group section row on the plugin admin page */
+				esc_html__( 'Section title', 'buddypress-registration-groups-1' ),
+				$index,
+				esc_attr( $section['title'] )
+			);
+
+			printf(
+				'<p><label>%1$s<br /><input type="text" class="regular-text" name="bp_registration_groups_option_handle[bp_registration_groups_sections][%2$d][description]" value="%3$s" /></label></p>',
+				/* translators: label of the optional description field of a group section row on the plugin admin page */
+				esc_html__( 'Section description (optional)', 'buddypress-registration-groups-1' ),
+				$index,
+				esc_attr( $section['description'] )
+			);
+
+			/* translators: label of the group assignment list of a group section row on the plugin admin page */
+			echo '<p style="margin-bottom: 4px;">' . esc_html__( 'Groups in this section', 'buddypress-registration-groups-1' ) . '</p>';
+			if ( empty( $groups ) ) {
+				/* translators: shown in a group section row on the plugin admin page when the site has no groups yet */
+				echo '<em>' . esc_html__( 'No groups exist yet.', 'buddypress-registration-groups-1' ) . '</em>';
+			} else {
+				echo '<div style="max-height: 160px; overflow-y: auto; border: 1px solid #c3c4c7; padding: 4px 8px;">';
+				foreach ( $groups as $group ) {
+					// Status-hidden groups are never shown on the registration
+					// form, so offering them here would only mislead.
+					if ( 'hidden' === $group->status ) {
+						continue;
+					}
+					printf(
+						'<label style="display: block;"><input type="checkbox" name="bp_registration_groups_option_handle[bp_registration_groups_sections][%1$d][groups][]" value="%2$d"%3$s /> %4$s%5$s</label>',
+						$index,
+						absint( $group->id ),
+						checked( in_array( absint( $group->id ), $section['groups'], true ), true, false ),
+						esc_html( $group->name ),
+						'private' === $group->status ? ' <em>(' . esc_html( $group->status ) . ')</em>' : ''
+					);
+				}
+				echo '</div>';
+			}
+
+			if ( ! $is_new ) {
+				printf(
+					'<p style="margin-bottom: 0;"><label><input type="checkbox" name="bp_registration_groups_option_handle[bp_registration_groups_sections][%1$d][remove]" value="1" /> %2$s</label></p>',
+					$index,
+					/* translators: label of the checkbox that removes a group section row on the plugin admin page when the settings are saved */
+					esc_html__( 'Remove this section on save', 'buddypress-registration-groups-1' )
+				);
+			}
+
+			echo '</fieldset>';
+		}
   }
 }
 

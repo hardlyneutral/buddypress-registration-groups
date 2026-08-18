@@ -69,6 +69,23 @@
 }
 
 /**
+ * Curated group sections: each configured section renders as its own titled
+ * block inside the groups section.
+ */
+.reg_groups_section {
+	margin: 0 0 12px;
+}
+
+#buddypress .reg_groups_section_title,
+.reg_groups_section_title {
+	margin: 0 0 2px;
+}
+
+.reg_groups_section_description {
+	margin: 0 0 6px;
+}
+
+/**
  * The BP Nouveau template pack lays the register page sections out with
  * flexbox. Without a flex size of its own the groups section gets squeezed
  * into a narrow extra column, so give it a full row instead.
