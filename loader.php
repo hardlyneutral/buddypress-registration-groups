@@ -21,17 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Define a constant that can be checked to see if the component is installed or not.
+// Third-party code can check this constant to detect the plugin.
 define( 'BP_REGISTRATION_GROUPS_IS_INSTALLED', 1 );
 
 // Define a constant that will hold the current version number of the component
 define( 'BP_REGISTRATION_GROUPS_VERSION', '1.5.0' );
-
-// Define a constant that we can use to construct file paths throughout the component
-define( 'BP_REGISTRATION_GROUPS_PLUGIN_DIR', dirname( __FILE__ ) );
-
-// Define a constant that will hold the database version number that can be used for upgrading the DB
-define( 'BP_REGISTRATION_GROUPS_DB_VERSION', '1' );
 
 // Only load the component if BuddyPress is loaded and initialized. The
 // 'bp_include' action only ever fires when BuddyPress is active, so no
