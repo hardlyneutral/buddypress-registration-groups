@@ -79,10 +79,15 @@
 #buddypress .reg_groups_section_title,
 .reg_groups_section_title {
 	margin: 0 0 2px;
+	font-size: 1.2em;
+	font-weight: 600;
 }
 
 .reg_groups_section_description {
 	margin: 0 0 6px;
+	font-size: 0.85em;
+	font-style: italic;
+	color: gray;
 }
 
 /**

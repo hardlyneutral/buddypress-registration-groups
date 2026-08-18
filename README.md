@@ -132,10 +132,15 @@ Here is a list of the current selectors used in ```includes/styles.css```.
 #buddypress .reg_groups_section_title,
 .reg_groups_section_title {
 	margin: 0 0 2px;
+	font-size: 1.2em;
+	font-weight: 600;
 }
 
 .reg_groups_section_description {
 	margin: 0 0 6px;
+	font-size: 0.85em;
+	font-style: italic;
+	color: gray;
 }
 ```
 
@@ -192,6 +197,7 @@ Changelog
 * With the radio button display, each section is its own radio group, so registrants can select one group per section; checkboxes allow any number of selections across sections. Selections from every section are sanitized, aggregated once into the signup meta, and joined at activation.
 * The per-group Hide, Checked by default, and Auto-join settings apply inside sections, and hidden, private (when not shown), or nonexistent groups are never exposed even when assigned to a section.
 * Existing installations are unaffected until sections are configured: with no sections defined, the single global list renders exactly as before.
+* Refreshed all screenshots on current WordPress/BuddyPress and added a seventh showing Group Sections in action; the settings screenshot now includes the Group Sections editor.
 
 ### 1.4.0
 * New: "Require Group Selection" setting (off by default). When enabled, signup cannot be completed until the registrant selects at least one group, validated server-side on the BuddyPress signup flow (single site and multisite). Requested in the wordpress.org support forum.

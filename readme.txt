@@ -127,10 +127,15 @@ Here is a list of the current selectors used in `includes/styles.css`.
 #buddypress .reg_groups_section_title,
 .reg_groups_section_title {
 	margin: 0 0 2px;
+	font-size: 1.2em;
+	font-weight: 600;
 }
 
 .reg_groups_section_description {
 	margin: 0 0 6px;
+	font-size: 0.85em;
+	font-style: italic;
+	color: gray;
 }
 `
 
@@ -181,9 +186,10 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 1. Groups shown as a list of checkboxes on the new user registration page.
 2. Groups shown as a list of checkboxes in a scrollable container on the new user registration page.
 3. Groups shown as a list of radio buttons on the new user registration page.
-4. The admin settings page, including the per-group options table.
+4. The admin settings page, including the per-group options table and the Group Sections editor.
 5. Per-group options in action: an auto-join group shown as a locked "(automatic)" entry and a group checked by default.
 6. The "Require Group Selection" setting in action: signup blocked with an inline error until at least one group is selected.
+7. Group Sections in action: the registration form organized into curated "Interests" and "Activities" sections, each with its own title, description, and assigned groups.
 
 == Changelog ==
 = 1.5.0 =
@@ -192,6 +198,7 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * With the radio button display, each section is its own radio group, so registrants can select one group per section; checkboxes allow any number of selections across sections. Selections from every section are sanitized, aggregated once into the signup meta, and joined at activation.
 * The per-group Hide, Checked by default, and Auto-join settings apply inside sections, and hidden, private (when not shown), or nonexistent groups are never exposed even when assigned to a section.
 * Existing installations are unaffected until sections are configured: with no sections defined, the single global list renders exactly as before.
+* Refreshed all screenshots on current WordPress/BuddyPress and added a seventh showing Group Sections in action; the settings screenshot now includes the Group Sections editor.
 
 = 1.4.0 =
 * New: "Require Group Selection" setting (off by default). When enabled, signup cannot be completed until the registrant selects at least one group, validated server-side on the BuddyPress signup flow (single site and multisite). Requested in the wordpress.org support forum.
