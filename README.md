@@ -12,7 +12,7 @@ Requires PHP: 7.4
 
 License: GPLv2 or later
 
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -38,6 +38,12 @@ An optional "Require Group Selection" setting (off by default) prevents signup f
 selects at least one group. The requirement is validated on the server when the form is submitted, works with both
 checkbox and radio button display modes, and is skipped automatically if no selectable groups exist so registration
 is never blocked by a misconfiguration.
+
+Optional Group Sections let you organize the registration form into multiple titled sections — for example
+"Interests" and "Regions" — each with its own description and its own curated set of groups. While at least one
+section is configured, the form offers only the groups you assigned, each in exactly one section, and with the
+radio button display registrants can select one group per section. Leave the sections empty to keep the classic
+single list; existing installations render exactly as before.
 
 Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
@@ -117,6 +123,27 @@ Here is a list of the current selectors used in ```includes/styles.css```.
 }
 ```
 
+**Curated group sections:**
+```
+.reg_groups_section {
+	margin: 0 0 12px;
+}
+
+#buddypress .reg_groups_section_title,
+.reg_groups_section_title {
+	margin: 0 0 2px;
+	font-size: 1.2em;
+	font-weight: 600;
+}
+
+.reg_groups_section_description {
+	margin: 0 0 6px;
+	font-size: 0.85em;
+	font-style: italic;
+	color: gray;
+}
+```
+
 **Groups section - BP Nouveau template pack:**
 ```
 #buddypress .layout-wrap #registration-groups-section {
@@ -137,13 +164,17 @@ No. Hidden groups are never displayed on the registration form. If you mark a hi
 ### Can I require new users to select a group?
 Yes. Enable "Require Group Selection" on the plugin settings page. Signup then cannot be completed until the registrant selects at least one group offered on the form; an inline error appears next to the group list otherwise. Hidden and auto-join groups do not count toward the requirement. If no selectable groups exist, the requirement is skipped (and a warning is shown on the settings page) so registration is never locked.
 
+### Can I split the group list into more than one box, like "Interests" and "Regions"?
+Yes. Use the "Group Sections" panel on the plugin settings page to create ordered sections, each with a title, an optional description, and the groups you assign to it. While at least one section exists, the registration form shows only assigned groups, grouped under their section headings; a group can live in only one section (the first section that lists it wins). Checkboxes allow any number of selections across sections, and radio buttons allow one selection per section. Selections from every section are combined and joined at activation, and the per-group Hide, Checked by default, and Auto-join settings still apply.
+
 ### What if the plugin doesn't work?
 Use the WordPress plugin [support form here](http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
 
 Tests
 -----
-The `tests` directory contains a dependency-free regression suite for the signup validation, signup meta, and
-group eligibility logic. It stubs the small slice of WordPress/BuddyPress the plugin touches, so it runs with
+The `tests` directory contains a dependency-free regression suite for the signup validation, signup meta,
+group eligibility, and curated Group Sections logic (rendering, radio/checkbox behavior across sections, and
+settings sanitization). It stubs the small slice of WordPress/BuddyPress the plugin touches, so it runs with
 nothing but PHP:
 
 ```
@@ -161,6 +192,14 @@ capturing the wordpress.org screenshots in `.wordpress-org/`. Like `tests/` and 
 
 Changelog
 ---------
+### 1.5.0
+* New: Group Sections. Organize the registration form into multiple ordered, titled sections (each with an optional description), and curate exactly which groups each section offers. Requested in the wordpress.org support forum.
+* While at least one section is configured, only assigned groups appear on the form; a group assigned to more than one section is kept in the first section (duplicates never render). No taxonomy plugin is required — groups are assigned explicitly.
+* With the radio button display, each section is its own radio group, so registrants can select one group per section; checkboxes allow any number of selections across sections. Selections from every section are sanitized, aggregated once into the signup meta, and joined at activation.
+* The per-group Hide, Checked by default, and Auto-join settings apply inside sections, and hidden, private (when not shown), or nonexistent groups are never exposed even when assigned to a section.
+* Existing installations are unaffected until sections are configured: with no sections defined, the single global list renders exactly as before.
+* Refreshed all screenshots on current WordPress/BuddyPress and added a seventh showing Group Sections in action; the settings screenshot now includes the Group Sections editor.
+
 ### 1.4.0
 * New: "Require Group Selection" setting (off by default). When enabled, signup cannot be completed until the registrant selects at least one group, validated server-side on the BuddyPress signup flow (single site and multisite). Requested in the wordpress.org support forum.
 * An accessible inline error is shown next to the group list when the requirement is not met, and hidden, private (when not shown), nonexistent, and auto-join group IDs never satisfy it.
