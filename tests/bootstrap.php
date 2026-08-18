@@ -154,10 +154,43 @@ function bprg_test_filter_groups( $args ) {
 		if ( ! empty( $args['exclude'] ) && in_array( (int) $group->id, array_map( 'intval', (array) $args['exclude'] ), true ) ) {
 			continue;
 		}
+		// Real BuddyPress matches search terms against name and description;
+		// the stub's groups only have names, so match those.
+		if ( ! empty( $args['search_terms'] ) && false === stripos( $group->name, (string) $args['search_terms'] ) ) {
+			continue;
+		}
 		$matched[] = $group;
 	}
+	// Model real BuddyPress ordering for the 'type' values the plugin uses,
+	// simplified for determinism: 'newest' sorts by id descending (a proxy
+	// for date_created), 'active' and 'popular' sort by id ascending (real
+	// BuddyPress uses last_activity / total_member_count, which the stub's
+	// groups do not have), and 'random' sorts by name descending (real
+	// BuddyPress uses RAND(); a fixed order that differs from every other
+	// type lets tests tell the orderings apart).
+	$type = isset( $args['type'] ) ? $args['type'] : '';
+	if ( 'alphabetical' === $type ) {
+		usort( $matched, function ( $a, $b ) {
+			return strcasecmp( $a->name, $b->name );
+		} );
+	} elseif ( 'newest' === $type ) {
+		usort( $matched, function ( $a, $b ) {
+			return (int) $b->id - (int) $a->id;
+		} );
+	} elseif ( 'active' === $type || 'popular' === $type ) {
+		usort( $matched, function ( $a, $b ) {
+			return (int) $a->id - (int) $b->id;
+		} );
+	} elseif ( 'random' === $type ) {
+		usort( $matched, function ( $a, $b ) {
+			return strcasecmp( $b->name, $a->name );
+		} );
+	}
+	// per_page 0 or null means "all", as in real BuddyPress; 'page' beyond
+	// the first skips earlier pages, as in BP_Groups_Group::get().
 	if ( ! empty( $args['per_page'] ) && (int) $args['per_page'] > 0 ) {
-		$matched = array_slice( $matched, 0, (int) $args['per_page'] );
+		$page    = ( ! empty( $args['page'] ) && (int) $args['page'] > 0 ) ? (int) $args['page'] : 1;
+		$matched = array_slice( $matched, ( $page - 1 ) * (int) $args['per_page'], (int) $args['per_page'] );
 	}
 	return $matched;
 }
@@ -178,9 +211,27 @@ function groups_join_group( $group_id, $user_id ) {
 /* The bp_has_groups() template loop used by the render function. */
 
 function bp_has_groups( $args = array() ) {
-	$args['show_hidden']              = false;
-	$GLOBALS['bprg_test']['loop']     = array_values( bprg_test_filter_groups( $args ) );
-	$GLOBALS['bprg_test']['loop_i']   = -1;
+	$args['show_hidden'] = false;
+
+	// Model BuddyPress's request-driven loop overrides: real bp_has_groups()
+	// feeds per_page and page through bp_sanitize_pagination_arg(), which
+	// replaces them with absint( $_REQUEST['num'] ) / absint( $_REQUEST['grpage'] )
+	// when those are positive integers, and reads search terms from
+	// $_REQUEST['group-filter-box'] or $_REQUEST['s'].
+	if ( isset( $_REQUEST['num'] ) && absint( $_REQUEST['num'] ) > 0 ) {
+		$args['per_page'] = absint( $_REQUEST['num'] );
+	}
+	if ( isset( $_REQUEST['grpage'] ) && absint( $_REQUEST['grpage'] ) > 0 ) {
+		$args['page'] = absint( $_REQUEST['grpage'] );
+	}
+	if ( ! empty( $_REQUEST['group-filter-box'] ) ) {
+		$args['search_terms'] = (string) $_REQUEST['group-filter-box'];
+	} elseif ( ! empty( $_REQUEST['s'] ) ) {
+		$args['search_terms'] = (string) $_REQUEST['s'];
+	}
+
+	$GLOBALS['bprg_test']['loop']   = array_values( bprg_test_filter_groups( $args ) );
+	$GLOBALS['bprg_test']['loop_i'] = -1;
 	return ! empty( $GLOBALS['bprg_test']['loop'] );
 }
 

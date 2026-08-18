@@ -4,7 +4,7 @@
 Plugin Name: BuddyPress Registration Groups
 Plugin URI: https://wordpress.org/plugins/buddypress-registration-groups-1/
 Description: Allows a new BuddyPress user to select groups to join during the registration process.
-Version: 1.5.0
+Version: 1.5.1
 Requires at least: 6.1
 Requires PHP: 7.4
 Requires Plugins: buddypress
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'BP_REGISTRATION_GROUPS_IS_INSTALLED', 1 );
 
 // Define a constant that will hold the current version number of the component
-define( 'BP_REGISTRATION_GROUPS_VERSION', '1.5.0' );
+define( 'BP_REGISTRATION_GROUPS_VERSION', '1.5.1' );
 
 // Only load the component if BuddyPress is loaded and initialized. The
 // 'bp_include' action only ever fires when BuddyPress is active, so no

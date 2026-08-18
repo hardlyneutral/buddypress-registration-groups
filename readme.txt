@@ -5,7 +5,7 @@ Tags: buddypress, groups, registration, autojoin, multisite
 Requires at least: 6.1
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -118,9 +118,22 @@ Here is a list of the current selectors used in `includes/styles.css`.
 }
 `
 
+**Accessibility fieldsets (invisible wrappers naming each group of inputs for screen readers):**
+`
+#buddypress #registration-groups-section .reg_groups_fieldset,
+#registration-groups-section .reg_groups_fieldset {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	min-width: 0;
+	background: transparent;
+}
+`
+
 **Curated group sections:**
 `
-.reg_groups_section {
+#buddypress #registration-groups-section .reg_groups_section,
+#registration-groups-section .reg_groups_section {
 	margin: 0 0 12px;
 }
 
@@ -199,6 +212,17 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 7. Group Sections in action: the registration form organized into curated "Interests" and "Activities" sections, each with its own title, description, and assigned groups.
 
 == Changelog ==
+= 1.5.1 =
+* Hardening, bug-fix, and accessibility release following a full end-to-end audit of the signup flow on a live WordPress 7.0 + BuddyPress 14.5 install, including adversarial testing with forged form submissions.
+* Hardening: submitted group IDs are now parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs. The coerced IDs always had to pass the full eligibility checks, so this was never a way into a hidden or private group.
+* Fix: a group marked both Hide and Auto-join is no longer named as a locked "(automatic)" entry in the single-list display — it is joined silently, as the sections display and the settings help text always said.
+* Fix: the registration form now ignores BuddyPress's group-directory query-string arguments (?num=, ?grpage=, ?s=), which could resize or swap the configured group list.
+* Fix: with a display limit and a shifting order (Active, Popular, Random), a failed signup no longer loses the registrant's group selection on the re-rendered form — a still-eligible selection the requery left out is appended, checked.
+* Accessibility: each group list is now wrapped in an invisible fieldset named by the visible title, section titles and descriptions, and the inline required-selection error, so screen readers announce which question each checkbox or radio group answers. The visual layout is unchanged.
+* The "Display As" setting now stores only its three supported values, and the Title/Description fallback logic states its intent explicitly (an emptied field restores the advertised default, exactly as before).
+* Refreshed the translation template (.pot), which had not been regenerated since 1.3.0 and was missing every string added in 1.4.0 and 1.5.0.
+* Expanded the regression suite (six new test files) covering strict ID parsing, locked auto-join display in the single list, query-string override neutralization, selection preservation under display limits, and the require-selection and sections interactions.
+
 = 1.5.0 =
 * New: Group Sections. Organize the registration form into multiple ordered, titled sections (each with an optional description), and curate exactly which groups each section offers. Requested in the wordpress.org support forum.
 * While at least one section is configured, only assigned groups appear on the form; a group assigned to more than one section is kept in the first section (duplicates never render). No taxonomy plugin is required — groups are assigned explicitly.
@@ -331,6 +355,9 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * First version!
 
 == Upgrade Notice ==
+
+= 1.5.1 =
+* Hardening, bug-fix, and accessibility release after a full end-to-end audit on live WordPress and BuddyPress. No new settings and no visual changes. Safe to upgrade.
 
 = 1.5.0 =
 * Adds optional Group Sections for organizing the registration form into multiple titled group lists. No behavior changes unless sections are configured. Safe to upgrade.
