@@ -392,11 +392,12 @@ function bp_registration_groups() {
 	// get the BP Registration Groups options array from the WP options table
 	$bp_registration_groups_options = get_option( 'bp_registration_groups_option_handle' );
 
-	// set $bp_registration_groups_title to the stored value; fall back to 'Groups' if no value is stored
-	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && $bp_registration_groups_options['bp_registration_groups_title'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
+	// The stored title/description, falling back to the documented defaults
+	// when the option is unset or saved empty (the settings page advertises
+	// "Default: Groups", so an emptied field deliberately restores it).
+	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_title'] ) ? $bp_registration_groups_options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
 
-	// set $bp_registration_groups_description to the stored value; fall back to 'Check one or more areas of interest' if no value is stored
-	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && $bp_registration_groups_options['bp_registration_groups_description'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
+	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_description'] ) ? $bp_registration_groups_options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
 
 	// set $bp_registration_groups_display_order to the stored value if it is a supported order; fall back to 'alphabetical' otherwise.
 	// The legacy forum orders were removed from BuddyPress, so map them to 'active' (the order BuddyPress silently fell back to).
