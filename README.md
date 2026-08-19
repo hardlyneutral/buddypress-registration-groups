@@ -12,7 +12,7 @@ Requires PHP: 7.4
 
 License: GPLv2 or later
 
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -192,6 +192,16 @@ capturing the wordpress.org screenshots in `.wordpress-org/`. Like `tests/` and 
 
 Changelog
 ---------
+### 1.5.1
+* Hardening, bug-fix, and accessibility release following a full end-to-end audit of the signup flow on a live WordPress 7.0 + BuddyPress 14.5 install (built with the sandbox skill above), including adversarial testing with forged form submissions.
+* Hardening: submitted group IDs are parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs by `absint()`. The coerced IDs always had to pass the full eligibility checks, so this was never a way into a hidden or private group.
+* Fix: a group marked both Hide and Auto-join is no longer named as a locked "(automatic)" entry in the single-list display — it is joined silently, matching the sections display and the settings help text.
+* Fix: the registration form now ignores BuddyPress's group-directory query-string arguments (`?num=`, `?grpage=`, `?s=`), which could resize or swap the configured group list.
+* Fix: with a display limit and a shifting order (Active, Popular, Random), a failed signup no longer loses the registrant's group selection on the re-rendered form.
+* Accessibility: each group list is wrapped in an invisible `fieldset` named via `aria-labelledby`/`aria-describedby` (title, section titles/descriptions, and the inline error), so screen readers announce which question each checkbox or radio group answers. Visual layout unchanged.
+* The "Display As" setting stores only its three supported values, and the translation template (.pot) was regenerated — it had not been refreshed since 1.3.0.
+* Expanded the regression suite (six new test files, 140 assertions total) and upgraded the test stubs to model BuddyPress's group ordering and request-driven query overrides.
+
 ### 1.5.0
 * New: Group Sections. Organize the registration form into multiple ordered, titled sections (each with an optional description), and curate exactly which groups each section offers. Requested in the wordpress.org support forum.
 * While at least one section is configured, only assigned groups appear on the form; a group assigned to more than one section is kept in the first section (duplicates never render). No taxonomy plugin is required — groups are assigned explicitly.

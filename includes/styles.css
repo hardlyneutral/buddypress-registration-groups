@@ -69,10 +69,25 @@
 }
 
 /**
+ * The fieldsets exist for assistive technology — they tell screen readers
+ * which question each group of checkboxes/radios answers. Visually they are
+ * invisible wrappers, so strip the browser/theme fieldset chrome.
+ */
+#buddypress #registration-groups-section .reg_groups_fieldset,
+#registration-groups-section .reg_groups_fieldset {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	min-width: 0;
+	background: transparent;
+}
+
+/**
  * Curated group sections: each configured section renders as its own titled
  * block inside the groups section.
  */
-.reg_groups_section {
+#buddypress #registration-groups-section .reg_groups_section,
+#registration-groups-section .reg_groups_section {
 	margin: 0 0 12px;
 }
 

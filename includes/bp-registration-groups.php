@@ -149,8 +149,23 @@ function bp_registration_groups_get_submitted_group_ids() {
 		return array();
 	}
 
+	$group_ids = array();
+
+	// The form's own inputs only ever submit plain digit strings, so accept
+	// exactly that (plus genuine ints, in case another plugin filtered the
+	// value). Anything else — nested arrays, negatives, floats — is a forged
+	// payload; dropping it here avoids absint() coercing it into an
+	// unrelated group ID (an array casts to 1, '-4' flips to 4).
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing
-	return array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['field_reg_groups'] ) ) ) ) );
+	foreach ( (array) wp_unslash( $_POST['field_reg_groups'] ) as $value ) {
+		if ( is_int( $value ) && $value > 0 ) {
+			$group_ids[] = $value;
+		} elseif ( is_string( $value ) && ctype_digit( $value ) && (int) $value > 0 ) {
+			$group_ids[] = (int) $value;
+		}
+	}
+
+	return array_values( array_unique( $group_ids ) );
 }
 
 /**
@@ -160,6 +175,12 @@ function bp_registration_groups_get_submitted_group_ids() {
 * exists, has an allowed status, is not hidden per-group, is not an
 * auto-join group (those are joined automatically and are never selectable),
 * and — when curated sections are configured — is assigned to a section.
+*
+* The "Number of Groups to Display" limit is deliberately NOT enforced here:
+* it trims how many groups the form shows, but with the active/popular/random
+* orders the displayed subset changes between page loads, so treating it as
+* an eligibility rule would reject legitimate selections. Use the per-group
+* Hide option (or sections) to make a specific group unselectable.
 */
 function bp_registration_groups_get_valid_submitted_group_ids() {
 	$group_ids = bp_registration_groups_get_submitted_group_ids();
@@ -306,6 +327,42 @@ function bp_registration_groups_validate_signup() {
 }
 
 /**
+* bp_registration_groups_has_groups()
+*
+* Run bp_has_groups() for the registration list with BuddyPress's
+* request-driven loop overrides neutralized. BP's groups template reads
+* 'num', 'grpage', 'group_type', and search terms straight from the query
+* string — useful on a browsable directory, but on the registration form it
+* would let ?num=999 bypass the configured display limit (or ?grpage=2 /
+* ?s=... swap the offered list for a different one). The registration form
+* always renders exactly what the site owner configured.
+*/
+function bp_registration_groups_has_groups( $query_args ) {
+	$override_keys = array( 'num', 'grpage', 'group_type', 'group-filter-box', 's', 'groups_search' );
+	$saved_values  = array();
+
+	foreach ( array( '_GET', '_POST', '_REQUEST' ) as $superglobal ) {
+		foreach ( $override_keys as $override_key ) {
+			if ( isset( $GLOBALS[ $superglobal ][ $override_key ] ) ) {
+				$saved_values[ $superglobal ][ $override_key ] = $GLOBALS[ $superglobal ][ $override_key ];
+				unset( $GLOBALS[ $superglobal ][ $override_key ] );
+			}
+		}
+	}
+
+	// The overrides only matter while the loop's template object is built.
+	$has_groups = bp_has_groups( $query_args );
+
+	foreach ( $saved_values as $superglobal => $values ) {
+		foreach ( $values as $override_key => $value ) {
+			$GLOBALS[ $superglobal ][ $override_key ] = $value;
+		}
+	}
+
+	return $has_groups;
+}
+
+/**
 * bp_registration_groups()
 *
 * Add list of groups to the registration page. Display a message stating no
@@ -335,11 +392,12 @@ function bp_registration_groups() {
 	// get the BP Registration Groups options array from the WP options table
 	$bp_registration_groups_options = get_option( 'bp_registration_groups_option_handle' );
 
-	// set $bp_registration_groups_title to the stored value; fall back to 'Groups' if no value is stored
-	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && $bp_registration_groups_options['bp_registration_groups_title'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
+	// The stored title/description, falling back to the documented defaults
+	// when the option is unset or saved empty (the settings page advertises
+	// "Default: Groups", so an emptied field deliberately restores it).
+	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_title'] ) ? $bp_registration_groups_options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
 
-	// set $bp_registration_groups_description to the stored value; fall back to 'Check one or more areas of interest' if no value is stored
-	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && $bp_registration_groups_options['bp_registration_groups_description'] != NULL ) ? $bp_registration_groups_options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
+	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_description'] ) ? $bp_registration_groups_options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
 
 	// set $bp_registration_groups_display_order to the stored value if it is a supported order; fall back to 'alphabetical' otherwise.
 	// The legacy forum orders were removed from BuddyPress, so map them to 'active' (the order BuddyPress silently fell back to).
@@ -408,6 +466,13 @@ function bp_registration_groups() {
 	$bp_registration_groups_locked_groups = array();
 	if ( ! empty( $bp_registration_groups_autojoin_ids ) && bp_registration_groups_autojoin_shows_locked() ) {
 		foreach ( $bp_registration_groups_autojoin_ids as $bp_registration_groups_autojoin_id ) {
+			// An auto-join group the admin also marked per-group Hide is
+			// joined silently — never named on the form (this matches the
+			// sections branch and the admin help text).
+			if ( in_array( $bp_registration_groups_autojoin_id, $bp_registration_groups_hidden_ids, true ) ) {
+				continue;
+			}
+
 			$bp_registration_groups_autojoin_group = groups_get_group( $bp_registration_groups_autojoin_id );
 			// Never name a status-hidden group on the public form; it is
 			// still auto-joined at activation.
@@ -474,22 +539,34 @@ function bp_registration_groups() {
 		}
 	}
 
+	// Accessible-name plumbing: each fieldset below points at the visible
+	// title/description (and, when present, the inline error) so screen
+	// readers announce which question a group of inputs answers.
+	$bp_registration_groups_describedby = 'reg-groups-desc' . ( '' !== $bp_registration_groups_error ? ' reg-groups-error' : '' );
+
 	/* list groups */ ?>
 		<div class="register-section" id="registration-groups-section">
-			<h4 class="reg_groups_title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
-			<p class="reg_groups_description"><?php echo esc_html( $bp_registration_groups_description ); ?></p>
+			<h4 class="reg_groups_title" id="reg-groups-title"><?php echo esc_html( $bp_registration_groups_title ); ?></h4>
+			<p class="reg_groups_description" id="reg-groups-desc"><?php echo esc_html( $bp_registration_groups_description ); ?></p>
 			<?php if ( '' !== $bp_registration_groups_error ) : ?>
 			<div id="reg-groups-error" class="error reg_groups_error" role="alert"><?php echo esc_html( $bp_registration_groups_error ); ?></div>
 			<?php endif; ?>
 			<?php if ( ! empty( $bp_registration_groups_sections ) ) : ?>
 			<?php if ( ! empty( $bp_registration_groups_sections_out ) ) : $i = 0; ?>
 			<?php foreach ( $bp_registration_groups_sections_out as $bp_registration_groups_section_index => $bp_registration_groups_section ) : ?>
-			<div class="reg_groups_section">
+			<?php
+			// Name each section's fieldset after its own title (falling back
+			// to the global title) and description, plus the shared inline
+			// error when one is showing.
+			$bp_registration_groups_section_labelledby  = '' !== $bp_registration_groups_section['title'] ? 'reg-groups-section-title-' . $bp_registration_groups_section_index : 'reg-groups-title';
+			$bp_registration_groups_section_describedby = trim( ( '' !== $bp_registration_groups_section['description'] ? 'reg-groups-section-desc-' . $bp_registration_groups_section_index : '' ) . ( '' !== $bp_registration_groups_error ? ' reg-groups-error' : '' ) );
+			?>
+			<fieldset class="reg_groups_section reg_groups_fieldset" aria-labelledby="<?php echo esc_attr( $bp_registration_groups_section_labelledby ); ?>"<?php if ( '' !== $bp_registration_groups_section_describedby ) : ?> aria-describedby="<?php echo esc_attr( $bp_registration_groups_section_describedby ); ?>"<?php endif; ?>>
 				<?php if ( '' !== $bp_registration_groups_section['title'] ) : ?>
-				<h5 class="reg_groups_section_title"><?php echo esc_html( $bp_registration_groups_section['title'] ); ?></h5>
+				<h5 class="reg_groups_section_title" id="reg-groups-section-title-<?php echo esc_attr( $bp_registration_groups_section_index ); ?>"><?php echo esc_html( $bp_registration_groups_section['title'] ); ?></h5>
 				<?php endif; ?>
 				<?php if ( '' !== $bp_registration_groups_section['description'] ) : ?>
-				<p class="reg_groups_section_description"><?php echo esc_html( $bp_registration_groups_section['description'] ); ?></p>
+				<p class="reg_groups_section_description" id="reg-groups-section-desc-<?php echo esc_attr( $bp_registration_groups_section_index ); ?>"><?php echo esc_html( $bp_registration_groups_section['description'] ); ?></p>
 				<?php endif; ?>
 				<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
 					<?php
@@ -527,7 +604,7 @@ function bp_registration_groups() {
 						<?php endif; ?>
 					<?php endforeach; ?>
 				</ul>
-			</div>
+			</fieldset>
 			<?php endforeach; ?>
 			<?php else : ?>
 			<p class="reg_groups_none">
@@ -538,8 +615,9 @@ function bp_registration_groups() {
 			</p>
 			<?php endif; ?>
 			<?php else : ?>
-			<?php $bp_registration_groups_has_groups = bp_has_groups( $bp_registration_groups_query_args ); ?>
+			<?php $bp_registration_groups_has_groups = bp_registration_groups_has_groups( $bp_registration_groups_query_args ); ?>
 			<?php if ( $bp_registration_groups_has_groups || ! empty( $bp_registration_groups_locked_groups ) ) : ?>
+			<fieldset class="reg_groups_fieldset" aria-labelledby="reg-groups-title" aria-describedby="<?php echo esc_attr( $bp_registration_groups_describedby ); ?>">
 			<ul class="<?php echo esc_attr( $bp_registration_groups_display_as ); ?>">
 				<?php foreach ( $bp_registration_groups_locked_groups as $bp_registration_groups_locked_group ) : ?>
 					<li class="reg_groups_item reg_groups_item_locked">
@@ -549,7 +627,7 @@ function bp_registration_groups() {
 						?></em></label>
 					</li>
 				<?php endforeach; ?>
-				<?php $i = 0; $bp_registration_groups_default_checked = false; ?>
+				<?php $i = 0; $bp_registration_groups_default_checked = false; $bp_registration_groups_rendered_selectable_ids = array(); ?>
 				<?php if ( $bp_registration_groups_has_groups ) : while ( bp_groups() ) : bp_the_group(); ?>
 					<?php
 					// Safety net for BuddyPress versions without the 'status' or
@@ -570,9 +648,40 @@ function bp_registration_groups() {
 					<li class="reg_groups_item">
 						<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="field_reg_groups[]" value="<?php echo esc_attr( bp_get_group_id() ); ?>"<?php checked( $bp_registration_groups_is_checked ); ?> /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( bp_get_group_name() ); ?></label>
 					</li>
-					<?php $i++; ?>
+					<?php $i++; $bp_registration_groups_rendered_selectable_ids[] = absint( bp_get_group_id() ); ?>
 				<?php endwhile; endif; ?>
+				<?php
+				// A failed signup re-renders the list from a fresh query; with
+				// a display limit and a shifting order (random/active/popular)
+				// that query can omit a group the registrant selected, which
+				// would silently drop their choice from the resubmission.
+				// Append any submitted, still-offerable selection the query
+				// left out so it stays visible, checked, and resubmittable.
+				if ( $bp_registration_groups_signup_posted ) :
+					foreach ( bp_registration_groups_get_valid_submitted_group_ids() as $bp_registration_groups_submitted_id ) :
+						if ( in_array( $bp_registration_groups_submitted_id, $bp_registration_groups_rendered_selectable_ids, true ) ) {
+							continue;
+						}
+
+						$bp_registration_groups_submitted_group = groups_get_group( $bp_registration_groups_submitted_id );
+
+						if ( empty( $bp_registration_groups_submitted_group->id ) ) {
+							continue;
+						}
+
+						$bp_registration_groups_is_checked = ( 'radio' !== $bp_registration_groups_input_type || ! $bp_registration_groups_default_checked );
+						if ( $bp_registration_groups_is_checked ) {
+							$bp_registration_groups_default_checked = true;
+						}
+						?>
+					<li class="reg_groups_item">
+						<input class="reg_groups_group_checkbox" type="<?php echo esc_attr( $bp_registration_groups_input_type ); ?>" id="field_reg_groups_<?php echo esc_attr( $i ); ?>" name="field_reg_groups[]" value="<?php echo esc_attr( $bp_registration_groups_submitted_group->id ); ?>"<?php checked( $bp_registration_groups_is_checked ); ?> /><label class="reg_groups_group_label" for="field_reg_groups_<?php echo esc_attr( $i ); ?>"><?php echo esc_html( $bp_registration_groups_submitted_group->name ); ?></label>
+					</li>
+						<?php $i++; ?>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			</ul>
+			</fieldset>
 			<?php else : ?>
 			<p class="reg_groups_none">
 				<?php
@@ -899,8 +1008,12 @@ class BPRegistrationGroupsSettingsPage
         $new_input['bp_registration_groups_display_order'] = in_array( $display_order, array( 'active', 'newest', 'popular', 'random', 'alphabetical' ), true ) ? $display_order : 'alphabetical';
     }
 
-		if( isset( $input['bp_registration_groups_display_as'] ) )
-        $new_input['bp_registration_groups_display_as'] = absint( $input['bp_registration_groups_display_as'] );
+		if( isset( $input['bp_registration_groups_display_as'] ) ) {
+        // only the values the Display As radios actually post; anything else
+        // (including absint-coercible junk like '-3') falls back to the default
+        $display_as = is_scalar( $input['bp_registration_groups_display_as'] ) ? (string) $input['bp_registration_groups_display_as'] : '';
+        $new_input['bp_registration_groups_display_as'] = in_array( $display_as, array( '1', '2', '3' ), true ) ? (int) $display_as : 2;
+    }
 
     if( isset( $input['bp_registration_groups_show_private_groups'] ) )
         $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
