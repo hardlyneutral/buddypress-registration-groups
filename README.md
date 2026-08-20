@@ -12,7 +12,7 @@ Requires PHP: 7.4
 
 License: GPLv2 or later
 
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -162,7 +162,7 @@ Yes! You can toggle private group visibility on and off in the admin section
 No. Hidden groups are never displayed on the registration form. If you mark a hidden group as auto-join in the per-group options, new users join it silently at activation — its name is still never shown on the form.
 
 ### Can I require new users to select a group?
-Yes. Enable "Require Group Selection" on the plugin settings page. Signup then cannot be completed until the registrant selects at least one group offered on the form; an inline error appears next to the group list otherwise. Hidden and auto-join groups do not count toward the requirement. If no selectable groups exist, the requirement is skipped (and a warning is shown on the settings page) so registration is never locked.
+Yes. Enable "Require Group Selection" on the plugin settings page. Signup then cannot be completed until the registrant selects at least one group offered on the form; an inline error appears next to the group list otherwise. Hidden and auto-join groups do not count toward the requirement. If no selectable groups exist, the requirement is skipped (and a warning is shown on the settings page) so registration is never locked. The requirement is enforced on the server for both the browser signup form and the BuddyPress REST signup endpoint.
 
 ### Can I split the group list into more than one box, like "Interests" and "Regions"?
 Yes. Use the "Group Sections" panel on the plugin settings page to create ordered sections, each with a title, an optional description, and the groups you assign to it. While at least one section exists, the registration form shows only assigned groups, grouped under their section headings; a group can live in only one section (the first section that lists it wins). Checkboxes allow any number of selections across sections, and radio buttons allow one selection per section. Selections from every section are combined and joined at activation, and the per-group Hide, Checked by default, and Auto-join settings still apply.
@@ -192,6 +192,16 @@ capturing the wordpress.org screenshots in `.wordpress-org/`. Like `tests/` and 
 
 Changelog
 ---------
+### 1.5.2
+* Security and hardening follow-up to 1.5.1, after a second independent review found signup paths the browser-form hooks did not cover. Every fix was verified on a live WordPress 7.0 + BuddyPress 14.5 install with forged browser and REST submissions.
+* Security: signups created through the BuddyPress REST API are held to the same rules as the browser form — "Require Group Selection" is enforced on REST signups (the endpoint does not run `bp_signup_validate`, so this was previously bypassable), and REST group selections are validated and, in radio mode, capped exactly as on the form.
+* Fix: the radio-button "one choice" rule (one per Group Section when sections are configured) is now enforced on the server, not just in the browser; a crafted submission can no longer join several groups from one radio list.
+* Fix: a private Auto-join group with locked display on is no longer named on the form while "Show Private Groups" is off (still joined silently), and a group marked both Hide and Auto-join is never named — both now match the settings help text.
+* Hardening: submitted group IDs — from the form, the REST API, and the settings screen — are parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs by `absint()`.
+* Hardening: boolean-like settings ("Display As", "Show Private Groups", "Require Group Selection", "Auto-Join Display") store only their documented values, so a forged value cannot make the admin screen and the form disagree.
+* New: a `bp_registration_groups_join_failed` action fires when a membership cannot be created at activation, so a silent failure can be logged, alerted, or retried.
+* Expanded the regression suite (four new test files) and upgraded the test stubs to model REST requests, hook priority/accepted-argument counts, and injectable membership-join failures.
+
 ### 1.5.1
 * Hardening, bug-fix, and accessibility release following a full end-to-end audit of the signup flow on a live WordPress 7.0 + BuddyPress 14.5 install (built with the sandbox skill above), including adversarial testing with forged form submissions.
 * Hardening: submitted group IDs are parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs by `absint()`. The coerced IDs always had to pass the full eligibility checks, so this was never a way into a hidden or private group.

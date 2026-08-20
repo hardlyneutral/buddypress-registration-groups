@@ -5,7 +5,7 @@ Tags: buddypress, groups, registration, autojoin, multisite
 Requires at least: 6.1
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,7 +176,8 @@ No. Hidden groups are never displayed on the registration form. If you mark a hi
 Yes. Enable "Require Group Selection" on the plugin settings page. Signup then cannot be completed until the
 registrant selects at least one group offered on the form; an inline error appears next to the group list otherwise.
 Hidden and auto-join groups do not count toward the requirement. If no selectable groups exist, the requirement is
-skipped (and a warning is shown on the settings page) so registration is never locked.
+skipped (and a warning is shown on the settings page) so registration is never locked. The requirement is enforced
+on the server for both the browser signup form and the BuddyPress REST signup endpoint.
 
 = Can I split the group list into more than one box, like "Interests" and "Regions"? =
 
@@ -212,6 +213,16 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 7. Group Sections in action: the registration form organized into curated "Interests" and "Activities" sections, each with its own title, description, and assigned groups.
 
 == Changelog ==
+= 1.5.2 =
+* Security and hardening follow-up to 1.5.1, after a second independent review found signup paths the browser-form hooks did not cover. Every fix was verified on a live WordPress 7.0 + BuddyPress 14.5 install with forged browser and REST submissions.
+* Security: signups created through the BuddyPress REST API are now held to the same rules as the browser form. "Require Group Selection" is enforced on REST signups (the REST endpoint does not run the browser form's validation, so this was previously bypassable), and REST group selections are validated and, in radio mode, capped exactly as on the form.
+* Fix: with a radio-button display, the "one choice" (or one choice per Group Section) rule is now enforced on the server, not just in the browser. A crafted submission can no longer join several groups from a single radio list.
+* Fix: a private group marked Auto-join with locked display on is no longer named on the registration form while "Show Private Groups" is off (it is still joined silently). A group marked both Hide and Auto-join is likewise never named. Both now match the settings help text.
+* Hardening: submitted group IDs — from the form, the REST API, and the settings screen alike — are parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs.
+* Hardening: the "Display As", "Show Private Groups", "Require Group Selection", and "Auto-Join Display" settings now store only their documented values, so a forged value cannot make the admin screen and the registration form disagree.
+* New: a `bp_registration_groups_join_failed` action fires if a group membership cannot be created at activation, so a silent failure can be logged, alerted, or retried.
+* Expanded the regression suite (four new test files) and upgraded the test stubs to model REST requests, hook priority and accepted-argument counts, and injectable membership-join failures.
+
 = 1.5.1 =
 * Hardening, bug-fix, and accessibility release following a full end-to-end audit of the signup flow on a live WordPress 7.0 + BuddyPress 14.5 install, including adversarial testing with forged form submissions.
 * Hardening: submitted group IDs are now parsed strictly (plain digit values only); forged payload shapes are dropped instead of being coerced into unrelated group IDs. The coerced IDs always had to pass the full eligibility checks, so this was never a way into a hidden or private group.
@@ -355,6 +366,9 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * First version!
 
 == Upgrade Notice ==
+
+= 1.5.2 =
+* Security and hardening follow-up to 1.5.1: closes a REST-signup bypass of "Require Group Selection" and enforces radio-button limits on the server. No new settings and no visual changes. Recommended for all sites.
 
 = 1.5.1 =
 * Hardening, bug-fix, and accessibility release after a full end-to-end audit on live WordPress and BuddyPress. No new settings and no visual changes. Safe to upgrade.

@@ -39,6 +39,33 @@ function bp_registration_groups_allowed_statuses() {
 }
 
 /**
+* bp_registration_groups_clean_id_list()
+*
+* Reduce a raw value to a clean, de-duplicated list of positive group IDs.
+* Only genuine integers and plain digit strings are accepted; anything else
+* — nested arrays, negatives, floats, objects — is dropped rather than
+* coerced, because absint() would turn a non-empty array into 1 and '-4'
+* into 4, silently mapping malformed data onto unrelated groups.
+*/
+function bp_registration_groups_clean_id_list( $values ) {
+	if ( ! is_array( $values ) ) {
+		return array();
+	}
+
+	$group_ids = array();
+
+	foreach ( $values as $value ) {
+		if ( is_int( $value ) && $value > 0 ) {
+			$group_ids[] = $value;
+		} elseif ( is_string( $value ) && ctype_digit( $value ) && (int) $value > 0 ) {
+			$group_ids[] = (int) $value;
+		}
+	}
+
+	return array_values( array_unique( $group_ids ) );
+}
+
+/**
 * bp_registration_groups_get_id_list_option()
 *
 * Read one of the per-group ID lists (hidden, checked-by-default, auto-join)
@@ -51,7 +78,7 @@ function bp_registration_groups_get_id_list_option( $key ) {
 		return array();
 	}
 
-	return array_values( array_unique( array_filter( array_map( 'absint', $options[ $key ] ) ) ) );
+	return bp_registration_groups_clean_id_list( $options[ $key ] );
 }
 
 /**
@@ -77,9 +104,9 @@ function bp_registration_groups_get_sections() {
 			continue;
 		}
 
-		$title       = isset( $section['title'] ) ? trim( (string) $section['title'] ) : '';
-		$description = isset( $section['description'] ) ? trim( (string) $section['description'] ) : '';
-		$group_ids   = ( isset( $section['groups'] ) && is_array( $section['groups'] ) ) ? array_values( array_unique( array_filter( array_map( 'absint', $section['groups'] ) ) ) ) : array();
+		$title       = ( isset( $section['title'] ) && is_scalar( $section['title'] ) ) ? trim( (string) $section['title'] ) : '';
+		$description = ( isset( $section['description'] ) && is_scalar( $section['description'] ) ) ? trim( (string) $section['description'] ) : '';
+		$group_ids   = isset( $section['groups'] ) ? bp_registration_groups_clean_id_list( $section['groups'] ) : array();
 
 		if ( '' === $title && '' === $description && empty( $group_ids ) ) {
 			continue;
@@ -149,23 +176,11 @@ function bp_registration_groups_get_submitted_group_ids() {
 		return array();
 	}
 
-	$group_ids = array();
-
 	// The form's own inputs only ever submit plain digit strings, so accept
 	// exactly that (plus genuine ints, in case another plugin filtered the
-	// value). Anything else — nested arrays, negatives, floats — is a forged
-	// payload; dropping it here avoids absint() coercing it into an
-	// unrelated group ID (an array casts to 1, '-4' flips to 4).
+	// value); forged payload shapes are dropped, never coerced.
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing
-	foreach ( (array) wp_unslash( $_POST['field_reg_groups'] ) as $value ) {
-		if ( is_int( $value ) && $value > 0 ) {
-			$group_ids[] = $value;
-		} elseif ( is_string( $value ) && ctype_digit( $value ) && (int) $value > 0 ) {
-			$group_ids[] = (int) $value;
-		}
-	}
-
-	return array_values( array_unique( $group_ids ) );
+	return bp_registration_groups_clean_id_list( (array) wp_unslash( $_POST['field_reg_groups'] ) );
 }
 
 /**
@@ -176,14 +191,17 @@ function bp_registration_groups_get_submitted_group_ids() {
 * auto-join group (those are joined automatically and are never selectable),
 * and — when curated sections are configured — is assigned to a section.
 *
+* By default the IDs are read from the browser signup's $_POST; the REST
+* signup path passes the IDs it read from the WP_REST_Request instead.
+*
 * The "Number of Groups to Display" limit is deliberately NOT enforced here:
 * it trims how many groups the form shows, but with the active/popular/random
 * orders the displayed subset changes between page loads, so treating it as
 * an eligibility rule would reject legitimate selections. Use the per-group
 * Hide option (or sections) to make a specific group unselectable.
 */
-function bp_registration_groups_get_valid_submitted_group_ids() {
-	$group_ids = bp_registration_groups_get_submitted_group_ids();
+function bp_registration_groups_get_valid_submitted_group_ids( $submitted_ids = null ) {
+	$group_ids = is_array( $submitted_ids ) ? bp_registration_groups_clean_id_list( $submitted_ids ) : bp_registration_groups_get_submitted_group_ids();
 
 	if ( empty( $group_ids ) ) {
 		return array();
@@ -474,9 +492,11 @@ function bp_registration_groups() {
 			}
 
 			$bp_registration_groups_autojoin_group = groups_get_group( $bp_registration_groups_autojoin_id );
-			// Never name a status-hidden group on the public form; it is
-			// still auto-joined at activation.
-			if ( ! empty( $bp_registration_groups_autojoin_group->id ) && 'hidden' !== $bp_registration_groups_autojoin_group->status ) {
+			// Only name groups whose status the form is allowed to show:
+			// status-hidden groups never, private groups only when "Show
+			// Private Groups" is on. Suppressed groups are still auto-joined
+			// at activation.
+			if ( ! empty( $bp_registration_groups_autojoin_group->id ) && in_array( $bp_registration_groups_autojoin_group->status, $bp_registration_groups_show_statuses, true ) ) {
 				$bp_registration_groups_locked_groups[] = $bp_registration_groups_autojoin_group;
 			}
 		}
@@ -511,7 +531,10 @@ function bp_registration_groups() {
 				}
 
 				if ( in_array( $bp_registration_groups_section_group_id, $bp_registration_groups_autojoin_ids, true ) ) {
-					if ( bp_registration_groups_autojoin_shows_locked() && 'hidden' !== $bp_registration_groups_section_group->status ) {
+					// Locked entries obey the same status rules as the
+					// selectable list: status-hidden never named, private
+					// only when "Show Private Groups" is on.
+					if ( bp_registration_groups_autojoin_shows_locked() && in_array( $bp_registration_groups_section_group->status, $bp_registration_groups_show_statuses, true ) ) {
 						$bp_registration_groups_section_entries[] = array(
 							'group'  => $bp_registration_groups_section_group,
 							'locked' => true,
@@ -695,6 +718,135 @@ function bp_registration_groups() {
 <?php }
 
 /**
+* bp_registration_groups_cap_selection()
+*
+* Enforce the radio displays' selection shape on the server. The radio
+* rendering offers one choice (one per section when curated sections are
+* configured), but a crafted request can still submit several eligible IDs
+* at once. Keep the first submitted valid ID overall (single list) or the
+* first per configured section — mapped from the section configuration
+* itself, never from submitted array keys, which are attacker-controlled.
+* Checkbox displays pass through unchanged.
+*/
+function bp_registration_groups_cap_selection( $valid_group_ids ) {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	if ( empty( $valid_group_ids ) || ! isset( $options['bp_registration_groups_display_as'] ) || '3' != $options['bp_registration_groups_display_as'] ) {
+		return $valid_group_ids;
+	}
+
+	$sections = bp_registration_groups_get_sections();
+
+	if ( empty( $sections ) ) {
+		return array_slice( array_values( $valid_group_ids ), 0, 1 );
+	}
+
+	// Map each group to the first section that lists it — the same rule the
+	// render uses to de-duplicate groups across sections.
+	$section_index_of_group = array();
+	foreach ( $sections as $section_index => $section ) {
+		foreach ( $section['groups'] as $section_group_id ) {
+			if ( ! isset( $section_index_of_group[ $section_group_id ] ) ) {
+				$section_index_of_group[ $section_group_id ] = $section_index;
+			}
+		}
+	}
+
+	$kept_group_ids = array();
+	$used_sections  = array();
+
+	foreach ( $valid_group_ids as $group_id ) {
+		// Valid IDs are always section-assigned while sections are active;
+		// this guard only protects against future call sites.
+		if ( ! isset( $section_index_of_group[ $group_id ] ) ) {
+			continue;
+		}
+
+		if ( isset( $used_sections[ $section_index_of_group[ $group_id ] ] ) ) {
+			continue;
+		}
+
+		$used_sections[ $section_index_of_group[ $group_id ] ] = true;
+
+		$kept_group_ids[] = $group_id;
+	}
+
+	return $kept_group_ids;
+}
+
+/**
+* bp_registration_groups_rest_submitted_group_ids()
+*
+* The group IDs a BuddyPress REST signup request carries in its
+* 'field_reg_groups' parameter, as a clean list. REST requests deliver JSON
+* or form bodies through WP_REST_Request, not $_POST, so the browser-form
+* reader cannot see them.
+*/
+function bp_registration_groups_rest_submitted_group_ids( $request ) {
+	return bp_registration_groups_clean_id_list( (array) $request->get_param( 'field_reg_groups' ) );
+}
+
+/**
+* bp_registration_groups_rest_validate_signup()
+*
+* Enforce "Require Group Selection" for signups created through the
+* BuddyPress REST API. The REST signup endpoint never fires
+* 'bp_signup_validate' (it validates only the username and email), so
+* without this filter a REST signup would bypass the requirement the
+* browser form enforces. Mirrors bp_registration_groups_validate_signup(),
+* including the skip when no selectable groups exist.
+*/
+add_filter( 'bp_rest_signup_create_item_permissions_check', 'bp_registration_groups_rest_validate_signup', 10, 2 );
+function bp_registration_groups_rest_validate_signup( $retval, $request ) {
+	// Another plugin already rejected or replaced the check.
+	if ( true !== $retval ) {
+		return $retval;
+	}
+
+	if ( ! bp_registration_groups_selection_required() ) {
+		return $retval;
+	}
+
+	if ( ! empty( bp_registration_groups_get_valid_submitted_group_ids( bp_registration_groups_rest_submitted_group_ids( $request ) ) ) ) {
+		return $retval;
+	}
+
+	if ( ! bp_registration_groups_has_selectable_groups() ) {
+		return $retval;
+	}
+
+	return new WP_Error(
+		'bp_rest_registration_groups_selection_required',
+		bp_registration_groups_required_selection_error_message(),
+		array( 'status' => 400 )
+	);
+}
+
+/**
+* bp_registration_groups_rest_save()
+*
+* Store the group selection of a REST signup into the signup meta. Runs
+* after the generic 'bp_signup_usermeta' filter and is authoritative for
+* REST requests: it reads the IDs from the WP_REST_Request (which the
+* $_POST-based reader cannot see) and clears anything that reader picked up
+* from a form-encoded REST body, so both body styles behave identically.
+*/
+add_filter( 'bp_rest_signup_create_item_meta', 'bp_registration_groups_rest_save', 10, 2 );
+function bp_registration_groups_rest_save( $meta, $request ) {
+	$valid_group_ids = bp_registration_groups_cap_selection(
+		bp_registration_groups_get_valid_submitted_group_ids( bp_registration_groups_rest_submitted_group_ids( $request ) )
+	);
+
+	if ( ! empty( $valid_group_ids ) ) {
+		$meta['field_reg_groups'] = $valid_group_ids;
+	} else {
+		unset( $meta['field_reg_groups'] );
+	}
+
+	return $meta;
+}
+
+/**
 * bp_registration_groups_save()
 *
 * Save the groups selected during registration into the signup meta.
@@ -709,8 +861,9 @@ function bp_registration_groups_save( $usermeta ) {
 
 	// Only keep groups the registration form actually offers: allowed status,
 	// not hidden per-group, and not an auto-join group (those are joined
-	// automatically and are never selectable).
-	$valid_group_ids = bp_registration_groups_get_valid_submitted_group_ids();
+	// automatically and are never selectable). In radio mode, also cap the
+	// selection to the shape the form offers (one choice, or one per section).
+	$valid_group_ids = bp_registration_groups_cap_selection( bp_registration_groups_get_valid_submitted_group_ids() );
 
 	if ( ! empty( $valid_group_ids ) ) {
 		$usermeta['field_reg_groups'] = $valid_group_ids;
@@ -758,7 +911,20 @@ function bp_registration_groups_join( $user_id, $key = '', $user = false ) {
 			continue;
 		}
 
-		groups_join_group( $group_id, $user_id );
+		if ( ! groups_join_group( $group_id, $user_id ) ) {
+			/**
+			 * Fires when joining a group at account activation fails.
+			 *
+			 * The account is already activated at this point, so the failed
+			 * membership would otherwise be silently absent. Hook this to
+			 * log, alert, or retry.
+			 *
+			 * @param int    $group_id ID of the group that could not be joined.
+			 * @param int    $user_id  ID of the activated user.
+			 * @param string $context  'selected' for a registrant-selected group, 'autojoin' for an admin-designated one.
+			 */
+			do_action( 'bp_registration_groups_join_failed', $group_id, $user_id, 'selected' );
+		}
 	}
 
 	// Every new user joins the admin-designated auto-join groups, whether or
@@ -767,8 +933,9 @@ function bp_registration_groups_join( $user_id, $key = '', $user = false ) {
 	foreach ( bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' ) as $autojoin_group_id ) {
 		$autojoin_group = groups_get_group( $autojoin_group_id );
 
-		if ( ! empty( $autojoin_group->id ) ) {
-			groups_join_group( $autojoin_group_id, $user_id );
+		if ( ! empty( $autojoin_group->id ) && ! groups_join_group( $autojoin_group_id, $user_id ) ) {
+			/** This action is documented above in bp_registration_groups_join() */
+			do_action( 'bp_registration_groups_join_failed', $autojoin_group_id, $user_id, 'autojoin' );
 		}
 	}
 
@@ -1015,24 +1182,27 @@ class BPRegistrationGroupsSettingsPage
         $new_input['bp_registration_groups_display_as'] = in_array( $display_as, array( '1', '2', '3' ), true ) ? (int) $display_as : 2;
     }
 
+    // Boolean-like options are normalized to their two documented values so a
+    // forged value (e.g. 5) cannot make the admin UI and the frontend read
+    // the stored setting differently.
     if( isset( $input['bp_registration_groups_show_private_groups'] ) )
-        $new_input['bp_registration_groups_show_private_groups'] = absint( $input['bp_registration_groups_show_private_groups'] );
+        $new_input['bp_registration_groups_show_private_groups'] = ( '1' == $input['bp_registration_groups_show_private_groups'] ) ? 1 : 0;
 
     if( isset( $input['bp_registration_groups_number_displayed'] ) )
         $new_input['bp_registration_groups_number_displayed'] = absint( $input['bp_registration_groups_number_displayed'] );
 
     if( isset( $input['bp_registration_groups_require_selection'] ) )
-        $new_input['bp_registration_groups_require_selection'] = absint( $input['bp_registration_groups_require_selection'] );
+        $new_input['bp_registration_groups_require_selection'] = ( '1' == $input['bp_registration_groups_require_selection'] ) ? 1 : 0;
 
     // per-group ID lists; absent keys mean no boxes were checked
     foreach ( array( 'bp_registration_groups_hidden_groups', 'bp_registration_groups_checked_groups', 'bp_registration_groups_autojoin_groups' ) as $id_list_key ) {
         if ( isset( $input[ $id_list_key ] ) && is_array( $input[ $id_list_key ] ) ) {
-            $new_input[ $id_list_key ] = array_values( array_unique( array_filter( array_map( 'absint', $input[ $id_list_key ] ) ) ) );
+            $new_input[ $id_list_key ] = bp_registration_groups_clean_id_list( $input[ $id_list_key ] );
         }
     }
 
     if( isset( $input['bp_registration_groups_autojoin_display'] ) )
-        $new_input['bp_registration_groups_autojoin_display'] = absint( $input['bp_registration_groups_autojoin_display'] );
+        $new_input['bp_registration_groups_autojoin_display'] = ( '1' == $input['bp_registration_groups_autojoin_display'] ) ? 1 : 0;
 
     // curated group sections: clean each row, drop removed and empty rows
     // (the blank "add a new section" row submits empty), order by the
@@ -1049,9 +1219,9 @@ class BPRegistrationGroupsSettingsPage
                 continue;
             }
 
-            $title       = isset( $section['title'] ) ? sanitize_text_field( $section['title'] ) : '';
-            $description = isset( $section['description'] ) ? sanitize_text_field( $section['description'] ) : '';
-            $group_ids   = ( isset( $section['groups'] ) && is_array( $section['groups'] ) ) ? array_values( array_unique( array_filter( array_map( 'absint', $section['groups'] ) ) ) ) : array();
+            $title       = ( isset( $section['title'] ) && is_scalar( $section['title'] ) ) ? sanitize_text_field( $section['title'] ) : '';
+            $description = ( isset( $section['description'] ) && is_scalar( $section['description'] ) ) ? sanitize_text_field( $section['description'] ) : '';
+            $group_ids   = isset( $section['groups'] ) ? bp_registration_groups_clean_id_list( $section['groups'] ) : array();
 
             if ( '' === $title && '' === $description && empty( $group_ids ) ) {
                 continue;

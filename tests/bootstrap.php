@@ -29,7 +29,17 @@ $GLOBALS['bprg_test'] = array(
  * ------------------------------------------------------------------ */
 
 function add_filter( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
-	$GLOBALS['bprg_test']['hooks'][ $hook ][] = $callback;
+	// Record priority and accepted_args like real WordPress, so callbacks
+	// run low-priority-first and receive exactly the number of arguments they
+	// registered for. A callback that registered for fewer args than the hook
+	// passes must not silently receive the extras — that models the real
+	// engine and lets tests catch an accepted_args regression (e.g. an
+	// activation callback registered with the wrong count).
+	$GLOBALS['bprg_test']['hooks'][ $hook ][] = array(
+		'callback'      => $callback,
+		'priority'      => $priority,
+		'accepted_args' => $accepted_args,
+	);
 	return true;
 }
 
@@ -37,21 +47,41 @@ function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
 	return add_filter( $hook, $callback, $priority, $accepted_args );
 }
 
+function bprg_test_hook_callbacks( $hook ) {
+	$entries = $GLOBALS['bprg_test']['hooks'][ $hook ] ?? array();
+	// Stable sort by priority (ascending), preserving registration order
+	// within a priority — as WP_Hook does.
+	$indexed = array();
+	foreach ( $entries as $i => $entry ) {
+		$indexed[] = array( $i, $entry );
+	}
+	usort( $indexed, function ( $a, $b ) {
+		return ( $a[1]['priority'] === $b[1]['priority'] ) ? $a[0] - $b[0] : $a[1]['priority'] - $b[1]['priority'];
+	} );
+	return array_map( function ( $pair ) { return $pair[1]; }, $indexed );
+}
+
 function do_action( $hook, ...$args ) {
-	foreach ( $GLOBALS['bprg_test']['hooks'][ $hook ] ?? array() as $callback ) {
-		call_user_func_array( $callback, $args );
+	foreach ( bprg_test_hook_callbacks( $hook ) as $entry ) {
+		call_user_func_array( $entry['callback'], array_slice( $args, 0, $entry['accepted_args'] ) );
 	}
 }
 
 function apply_filters( $hook, $value, ...$args ) {
-	foreach ( $GLOBALS['bprg_test']['hooks'][ $hook ] ?? array() as $callback ) {
-		$value = call_user_func_array( $callback, array_merge( array( $value ), $args ) );
+	foreach ( bprg_test_hook_callbacks( $hook ) as $entry ) {
+		$call_args = array_slice( array_merge( array( $value ), $args ), 0, $entry['accepted_args'] );
+		$value     = call_user_func_array( $entry['callback'], $call_args );
 	}
 	return $value;
 }
 
 function bprg_test_hook_has( $hook, $callback ) {
-	return in_array( $callback, $GLOBALS['bprg_test']['hooks'][ $hook ] ?? array(), true );
+	foreach ( $GLOBALS['bprg_test']['hooks'][ $hook ] ?? array() as $entry ) {
+		if ( $entry['callback'] === $callback ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /* ---------------------------------------------------------------------
@@ -60,6 +90,43 @@ function bprg_test_hook_has( $hook, $callback ) {
 
 function is_admin() {
 	return false;
+}
+
+/* Minimal WP_Error / is_wp_error, enough for the REST validation path. */
+
+class WP_Error {
+	public $code;
+	public $message;
+	public $data;
+	public function __construct( $code = '', $message = '', $data = '' ) {
+		$this->code    = $code;
+		$this->message = $message;
+		$this->data    = $data;
+	}
+	public function get_error_code() {
+		return $this->code;
+	}
+	public function get_error_message() {
+		return $this->message;
+	}
+}
+
+function is_wp_error( $thing ) {
+	return $thing instanceof WP_Error;
+}
+
+/*
+ * Minimal WP_REST_Request: only get_param(), which the plugin's REST hooks
+ * use to read 'field_reg_groups'. Construct with an array of params.
+ */
+class WP_REST_Request {
+	private $params;
+	public function __construct( $params = array() ) {
+		$this->params = $params;
+	}
+	public function get_param( $key ) {
+		return array_key_exists( $key, $this->params ) ? $this->params[ $key ] : null;
+	}
 }
 
 function get_option( $name, $default = false ) {
@@ -205,6 +272,12 @@ function groups_get_groups( $args = array() ) {
 
 function groups_join_group( $group_id, $user_id ) {
 	$GLOBALS['bprg_test']['joins'][] = array( (int) $group_id, (int) $user_id );
+	// Tests can force specific group IDs to fail (as BuddyPress can, e.g. on a
+	// transient DB error) by listing them in bprg_test.join_failures, so the
+	// join-failure action path is exercisable.
+	if ( in_array( (int) $group_id, $GLOBALS['bprg_test']['join_failures'] ?? array(), true ) ) {
+		return false;
+	}
 	return true;
 }
 
