@@ -5,7 +5,7 @@ Tags: buddypress, groups, registration, autojoin, multisite
 Requires at least: 6.1
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.5.2
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,12 @@ Optional Group Sections let you organize the registration form into multiple tit
 section is configured, the form offers only the groups you assigned, each in exactly one section, and with the
 radio button display registrants can select one group per section. Leave the sections empty to keep the classic
 single list; existing installations render exactly as before.
+
+The `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, for example on a
+welcome page later in onboarding, or on sites where members sign up through something other than the BuddyPress
+registration form. It offers the same curated groups as the registration form, marks the groups a member already
+belongs to, joins public groups right away, and sends a membership request for private groups (when "Show Private
+Groups" is on). Logged-out visitors see a log-in link.
 
 Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
@@ -161,6 +167,54 @@ Here is a list of the current selectors used in `includes/styles.css`.
 }
 `
 
+**Join Groups shortcode (the list reuses the item, checkbox, label, multiselect, and section selectors above):**
+`
+.reg_groups_join .reg_groups_fieldset {
+	border: 0;
+	padding: 0;
+	margin: 0 0 12px;
+	min-width: 0;
+	background: transparent;
+}
+
+.reg_groups_join ul.reg_groups_list,
+.reg_groups_join ul.reg_groups_list_multiselect {
+	margin: 0;
+	padding-left: 0;
+}
+
+.reg_groups_join ul.reg_groups_list_multiselect {
+	padding: 6px;
+}
+
+.reg_groups_status {
+	font-style: italic;
+	color: gray;
+	font-size: 0.9em;
+}
+
+.reg_groups_join .reg_groups_error {
+	border-left: 4px solid #b32d2e;
+	background: #fcf0f1;
+	color: #b32d2e;
+	padding: 8px 12px;
+	margin: 0 0 10px;
+}
+
+.reg_groups_join_results {
+	border-left: 4px solid #00a32a;
+	background: #edfaef;
+	padding: 8px 12px;
+	margin: 0 0 10px;
+}
+
+.reg_groups_join_results ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+`
+
 == Frequently Asked Questions ==
 
 = Does this plugin show Private groups? =
@@ -195,6 +249,23 @@ subset changes between page loads, so the limit is not treated as an eligibility
 To make a specific group unselectable at registration, use the per-group Hide option (or leave it out of every
 Group Section).
 
+= Can members choose groups after registration? =
+
+Yes. Add the `[bp_registration_groups_join]` shortcode to any page (in the block editor, use a Shortcode block).
+Logged-in members see the groups the registration form offers, with "(member)" or "(request pending)" next to the ones
+that already apply, and can join the rest: public groups immediately, and private groups by a membership request that a
+group administrator approves. After submitting, the page lists what happened to each selected group. Logged-out visitors
+see a message with a log-in link.
+
+The shortcode uses the Title, Description, Display Order, Show Private Groups, Number of Groups to Display, per-group
+Hide, and Group Sections settings, plus the checkbox styles from "Display As" (Radio Buttons shows as checkboxes).
+Require Group Selection, Checked by default, and Auto-Join Display apply only to registration, and auto-join groups are
+not listed. Submissions are protected by a nonce and only ever change the logged-in member's own memberships; group IDs
+the page does not offer are ignored.
+
+If you would rather let members browse every group, the built-in BuddyPress Groups directory already does that. The
+shortcode is for offering the same curated list as your registration form.
+
 = What if the plugin doesn't work? =
 
 Use the WordPress plugin support form (http://wordpress.org/support/plugin/buddypress-registration-groups-1). I only do this in my spare time, so don't expect a super quick response :)
@@ -207,12 +278,22 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 1. Groups shown as a list of checkboxes on the new user registration page.
 2. Groups shown as a list of checkboxes in a scrollable container on the new user registration page.
 3. Groups shown as a list of radio buttons on the new user registration page.
-4. The admin settings page, including the per-group options table and the Group Sections editor.
+4. The admin settings page, including the per-group options table, the Group Sections editor, and the Join Groups Shortcode help.
 5. Per-group options in action: an auto-join group shown as a locked "(automatic)" entry and a group checked by default.
 6. The "Require Group Selection" setting in action: signup blocked with an inline error until at least one group is selected.
 7. Group Sections in action: the registration form organized into curated "Interests" and "Activities" sections, each with its own title, description, and assigned groups.
+8. The Join Groups shortcode on a page after registration: a public group joined, a private group requested, and the member's existing memberships marked.
 
 == Changelog ==
+= 1.6.0 =
+* New: the `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, from any page. Requested in the wordpress.org support forum.
+* The shortcode offers exactly the groups the registration form offers (the same eligibility rules, per-group Hide, and Group Sections), marks groups the member already belongs to or has asked to join, and reports what happened to each selection.
+* Public groups are joined right away. Private groups, when "Show Private Groups" is on, get a BuddyPress membership request for a group administrator to approve; they are never joined directly. BuddyPress's own permission checks apply, so banned members cannot rejoin.
+* Security: submissions require a nonce, only ever change the logged-in member's own memberships, and ignore any group ID the page does not offer (hidden, private while private groups are off, auto-join, unassigned to a section, or nonexistent), without naming it. Resubmitting is harmless: existing memberships and pending requests are reported, not repeated.
+* Registration-only settings (Require Group Selection, Radio Buttons, Checked by default, Auto-Join Display) do not apply to the shortcode, and the signup and activation flow is unchanged.
+* The settings page has a new "Join Groups Shortcode" section explaining the shortcode, and a new screenshot shows it in action.
+* Expanded the regression suite (three new test files) and extended the test stubs to model the current user, nonces, memberships, membership requests, bans, and BuddyPress's group capabilities.
+
 = 1.5.2 =
 * Security and hardening follow-up to 1.5.1, after a second independent review found signup paths the browser-form hooks did not cover. Every fix was verified on a live WordPress 7.0 + BuddyPress 14.5 install with forged browser and REST submissions.
 * Security: signups created through the BuddyPress REST API are now held to the same rules as the browser form. "Require Group Selection" is enforced on REST signups (the REST endpoint does not run the browser form's validation, so this was previously bypassable), and REST group selections are validated and, in radio mode, capped exactly as on the form.
@@ -366,6 +447,9 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * First version!
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+* Adds the optional `[bp_registration_groups_join]` shortcode so members can join groups after registration. No changes to registration unless you use it. Safe to upgrade.
 
 = 1.5.2 =
 * Security and hardening follow-up to 1.5.1: closes a REST-signup bypass of "Require Group Selection" and enforces radio-button limits on the server. No new settings and no visual changes. Recommended for all sites.

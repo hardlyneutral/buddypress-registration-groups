@@ -3,9 +3,11 @@
  * Test bootstrap: minimal WordPress/BuddyPress stubs.
  *
  * Provides just enough of the WordPress plugin API (hooks, options,
- * escaping) and the BuddyPress groups API (groups loop, group lookups,
- * signup globals) to load includes/bp-registration-groups.php and exercise
- * its registration-form hooks without a WordPress install.
+ * escaping, the current user, nonces, shortcodes) and the BuddyPress groups
+ * API (groups loop, group lookups, memberships, membership requests, bans,
+ * group capabilities, signup globals) to load the plugin's includes and
+ * exercise its registration-form hooks and join-groups shortcode without a
+ * WordPress install.
  *
  * Run the whole suite with: php tests/run-tests.php
  */
@@ -14,14 +16,22 @@ define( 'ABSPATH', __DIR__ . '/' );
 define( 'BP_REGISTRATION_GROUPS_VERSION', 'test' );
 
 $GLOBALS['bprg_test'] = array(
-	'options'    => array(),
-	'groups'     => array(), // id => object with id, name, status
-	'joins'      => array(), // list of array( group_id, user_id )
-	'hooks'      => array(), // hook name => list of callbacks
-	'loop'       => array(),
-	'loop_i'     => -1,
-	'assertions' => 0,
-	'failures'   => 0,
+	'options'         => array(),
+	'groups'          => array(), // id => object with id, name, status
+	'joins'           => array(), // list of array( group_id, user_id )
+	'members'         => array(), // user_id => array( group_id => true )
+	'requests'        => array(), // user_id => array( group_id => true ), pending membership requests
+	'invites'         => array(), // user_id => array( group_id => true ), outstanding invitations
+	'banned'          => array(), // user_id => array( group_id => true )
+	'requests_sent'   => array(), // list of array( group_id, user_id ), membership request attempts
+	'cap_denied'      => array(), // list of array( capability, group_id ) denied by "another plugin"
+	'current_user_id' => 0,
+	'shortcodes'      => array(), // tag => callback
+	'hooks'           => array(), // hook name => list of callbacks
+	'loop'            => array(),
+	'loop_i'          => -1,
+	'assertions'      => 0,
+	'failures'        => 0,
 );
 
 /* ---------------------------------------------------------------------
@@ -90,6 +100,42 @@ function bprg_test_hook_has( $hook, $callback ) {
 
 function is_admin() {
 	return false;
+}
+
+function get_current_user_id() {
+	return (int) $GLOBALS['bprg_test']['current_user_id'];
+}
+
+function is_user_logged_in() {
+	return get_current_user_id() > 0;
+}
+
+/*
+ * Nonces are bound to the action and the current user, as in WordPress, so a
+ * nonce minted for one user fails verification for another.
+ */
+function wp_create_nonce( $action = -1 ) {
+	return 'nonce-' . md5( $action . '|' . get_current_user_id() );
+}
+
+function wp_verify_nonce( $nonce, $action = -1 ) {
+	return ( is_string( $nonce ) && '' !== $nonce && hash_equals( wp_create_nonce( $action ), $nonce ) ) ? 1 : false;
+}
+
+function add_shortcode( $tag, $callback ) {
+	$GLOBALS['bprg_test']['shortcodes'][ $tag ] = $callback;
+}
+
+function wp_login_url( $redirect = '' ) {
+	$url = 'http://example.test/wp-login.php';
+	if ( ! empty( $redirect ) ) {
+		$url .= '?redirect_to=' . rawurlencode( $redirect );
+	}
+	return $url;
+}
+
+function get_permalink( $post = 0 ) {
+	return 'http://example.test/choose-groups/';
 }
 
 /* Minimal WP_Error / is_wp_error, enough for the REST validation path. */
@@ -166,6 +212,14 @@ function esc_html( $text ) {
 
 function esc_attr( $text ) {
 	return htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
+function esc_url( $url ) {
+	return htmlspecialchars( (string) $url, ENT_QUOTES );
+}
+
+function _n( $single, $plural, $number, $domain = 'default' ) {
+	return 1 === (int) $number ? $single : $plural;
 }
 
 function checked( $checked, $current = true, $echo = true ) {
@@ -278,7 +332,83 @@ function groups_join_group( $group_id, $user_id ) {
 	if ( in_array( (int) $group_id, $GLOBALS['bprg_test']['join_failures'] ?? array(), true ) ) {
 		return false;
 	}
+	// As in BuddyPress, joining clears an outstanding request for the group.
+	unset( $GLOBALS['bprg_test']['requests'][ (int) $user_id ][ (int) $group_id ] );
+	$GLOBALS['bprg_test']['members'][ (int) $user_id ][ (int) $group_id ] = true;
 	return true;
+}
+
+function groups_is_user_member( $user_id, $group_id ) {
+	return ! empty( $GLOBALS['bprg_test']['members'][ (int) $user_id ][ (int) $group_id ] );
+}
+
+function groups_is_user_banned( $user_id, $group_id ) {
+	return ! empty( $GLOBALS['bprg_test']['banned'][ (int) $user_id ][ (int) $group_id ] );
+}
+
+function groups_check_for_membership_request( $user_id, $group_id ) {
+	return ! empty( $GLOBALS['bprg_test']['requests'][ (int) $user_id ][ (int) $group_id ] );
+}
+
+/*
+ * Models BuddyPress 5.0+ groups_send_membership_request(): array arguments
+ * only (the positional form is deprecated, so the stub rejects it), guarded by
+ * the 'groups_request_membership' capability, and a request for a group the
+ * user was already invited to is accepted on the spot as a membership.
+ */
+function groups_send_membership_request( ...$args ) {
+	if ( 1 !== count( $args ) || ! is_array( $args[0] ) ) {
+		$GLOBALS['bprg_test']['deprecated_request_calls'] = ( $GLOBALS['bprg_test']['deprecated_request_calls'] ?? 0 ) + 1;
+		return false;
+	}
+
+	$user_id  = (int) ( $args[0]['user_id'] ?? 0 );
+	$group_id = (int) ( $args[0]['group_id'] ?? 0 );
+
+	$GLOBALS['bprg_test']['requests_sent'][] = array( $group_id, $user_id );
+
+	if ( ! bp_user_can( $user_id, 'groups_request_membership', array( 'group_id' => $group_id ) ) ) {
+		return false;
+	}
+
+	if ( ! empty( $GLOBALS['bprg_test']['invites'][ $user_id ][ $group_id ] ) ) {
+		unset( $GLOBALS['bprg_test']['invites'][ $user_id ][ $group_id ] );
+		$GLOBALS['bprg_test']['members'][ $user_id ][ $group_id ] = true;
+		return true;
+	}
+
+	$GLOBALS['bprg_test']['requests'][ $user_id ][ $group_id ] = true;
+	return count( $GLOBALS['bprg_test']['requests_sent'] );
+}
+
+/*
+ * Models the two group capabilities BuddyPress maps in
+ * bp_groups_user_can_filter(): joining needs a public group the user is not a
+ * member of or banned from; requesting needs a private group with no
+ * membership, pending request, or ban. Tests can deny a capability for a
+ * group (as another plugin filtering 'bp_user_can' could) via cap_denied.
+ */
+function bp_user_can( $user_id, $capability, $args = array() ) {
+	$group_id = (int) ( $args['group_id'] ?? 0 );
+
+	if ( in_array( array( $capability, $group_id ), $GLOBALS['bprg_test']['cap_denied'], true ) ) {
+		return false;
+	}
+
+	$group = groups_get_group( $group_id );
+
+	if ( ! $user_id || empty( $group->id ) ) {
+		return false;
+	}
+
+	switch ( $capability ) {
+		case 'groups_join_group':
+			return 'public' === $group->status && ! groups_is_user_member( $user_id, $group_id ) && ! groups_is_user_banned( $user_id, $group_id );
+		case 'groups_request_membership':
+			return 'private' === $group->status && ! groups_is_user_member( $user_id, $group_id ) && ! groups_check_for_membership_request( $user_id, $group_id ) && ! groups_is_user_banned( $user_id, $group_id );
+	}
+
+	return false;
 }
 
 /* The bp_has_groups() template loop used by the render function. */
@@ -348,6 +478,14 @@ function bprg_test_set_plugin_options( $options ) {
 	$GLOBALS['bprg_test']['options']['bp_registration_groups_option_handle'] = $options;
 }
 
+function bprg_test_set_user( $user_id ) {
+	$GLOBALS['bprg_test']['current_user_id'] = (int) $user_id;
+}
+
+function bprg_test_do_shortcode( $tag, $atts = array() ) {
+	return call_user_func( $GLOBALS['bprg_test']['shortcodes'][ $tag ], $atts, '', $tag );
+}
+
 function bprg_test_reset_signup() {
 	buddypress()->signup         = new stdClass();
 	buddypress()->signup->errors = array();
@@ -378,5 +516,6 @@ function bprg_test_done() {
 	exit( $failures > 0 ? 1 : 0 );
 }
 
-/* Load the code under test. */
+/* Load the code under test, in the order loader.php loads it. */
 require dirname( __DIR__ ) . '/includes/bp-registration-groups.php';
+require dirname( __DIR__ ) . '/includes/bp-registration-groups-join.php';
