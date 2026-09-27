@@ -82,6 +82,19 @@ function bp_registration_groups_get_id_list_option( $key ) {
 }
 
 /**
+* bp_registration_groups_get_unselectable_group_ids()
+*
+* Group IDs the registration form never offers as a choice: per-group hidden
+* groups and auto-join groups (which are joined automatically instead).
+*/
+function bp_registration_groups_get_unselectable_group_ids() {
+	return array_values( array_unique( array_merge(
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
+	) ) );
+}
+
+/**
 * bp_registration_groups_get_sections()
 *
 * The ordered, curated group sections the site owner configured, as a clean
@@ -137,6 +150,67 @@ function bp_registration_groups_get_section_group_ids() {
 	}
 
 	return array_values( array_unique( $group_ids ) );
+}
+
+/**
+* bp_registration_groups_get_title()
+*
+* The group list title, falling back to the documented default when the
+* option is unset or saved empty (the settings page advertises "Default:
+* Groups", so an emptied field deliberately restores it).
+*/
+function bp_registration_groups_get_title() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return ( isset( $options['bp_registration_groups_title'] ) && '' !== $options['bp_registration_groups_title'] ) ? $options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
+}
+
+/**
+* bp_registration_groups_get_description()
+*
+* The group list description, with the same empty-means-default fallback as
+* the title.
+*/
+function bp_registration_groups_get_description() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return ( isset( $options['bp_registration_groups_description'] ) && '' !== $options['bp_registration_groups_description'] ) ? $options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
+}
+
+/**
+* bp_registration_groups_get_display_order()
+*
+* The stored display order if it is one bp_has_groups()/groups_get_groups()
+* support, 'alphabetical' otherwise. The legacy forum orders were removed
+* from BuddyPress, so they map to 'active' (the order BuddyPress silently
+* fell back to).
+*/
+function bp_registration_groups_get_display_order() {
+	$options       = get_option( 'bp_registration_groups_option_handle' );
+	$display_order = isset( $options['bp_registration_groups_display_order'] ) ? $options['bp_registration_groups_display_order'] : 'alphabetical';
+
+	if ( in_array( $display_order, array( 'most-forum-topics', 'most-forum-posts' ), true ) ) {
+		return 'active';
+	}
+
+	if ( ! in_array( $display_order, array( 'active', 'newest', 'popular', 'random', 'alphabetical' ), true ) ) {
+		return 'alphabetical';
+	}
+
+	return $display_order;
+}
+
+/**
+* bp_registration_groups_get_list_class()
+*
+* The class of the group list container for the "Display As" setting:
+* 'reg_groups_list_multiselect' (the scrollable box) when the setting is
+* unset or "Checkboxes Multiselect", 'reg_groups_list' otherwise.
+*/
+function bp_registration_groups_get_list_class() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return ( isset( $options['bp_registration_groups_display_as'] ) && '2' != $options['bp_registration_groups_display_as'] ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
 }
 
 /**
@@ -208,10 +282,7 @@ function bp_registration_groups_get_valid_submitted_group_ids( $submitted_ids = 
 	}
 
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
-	$not_selectable   = array_merge(
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-	);
+	$not_selectable   = bp_registration_groups_get_unselectable_group_ids();
 	$sections_active  = ! empty( bp_registration_groups_get_sections() );
 	$section_ids      = $sections_active ? bp_registration_groups_get_section_group_ids() : array();
 	$valid_group_ids  = array();
@@ -244,10 +315,7 @@ function bp_registration_groups_get_valid_submitted_group_ids( $submitted_ids = 
 */
 function bp_registration_groups_has_selectable_groups() {
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
-	$excluded_ids     = array_merge(
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-	);
+	$excluded_ids     = bp_registration_groups_get_unselectable_group_ids();
 
 	// When curated sections are configured, only groups assigned to a
 	// section are offered, so selectability is decided over that set alone.
@@ -410,26 +478,14 @@ function bp_registration_groups() {
 	// get the BP Registration Groups options array from the WP options table
 	$bp_registration_groups_options = get_option( 'bp_registration_groups_option_handle' );
 
-	// The stored title/description, falling back to the documented defaults
-	// when the option is unset or saved empty (the settings page advertises
-	// "Default: Groups", so an emptied field deliberately restores it).
-	$bp_registration_groups_title = ( isset( $bp_registration_groups_options['bp_registration_groups_title'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_title'] ) ? $bp_registration_groups_options['bp_registration_groups_title'] : __( 'Groups', 'buddypress-registration-groups-1' );
+	// the stored title/description (or their documented defaults) and the
+	// normalized display order
+	$bp_registration_groups_title         = bp_registration_groups_get_title();
+	$bp_registration_groups_description   = bp_registration_groups_get_description();
+	$bp_registration_groups_display_order = bp_registration_groups_get_display_order();
 
-	$bp_registration_groups_description = ( isset( $bp_registration_groups_options['bp_registration_groups_description'] ) && '' !== $bp_registration_groups_options['bp_registration_groups_description'] ) ? $bp_registration_groups_options['bp_registration_groups_description'] : __( 'Check one or more areas of interest', 'buddypress-registration-groups-1' );
-
-	// set $bp_registration_groups_display_order to the stored value if it is a supported order; fall back to 'alphabetical' otherwise.
-	// The legacy forum orders were removed from BuddyPress, so map them to 'active' (the order BuddyPress silently fell back to).
-	$bp_registration_groups_display_order_options = array( 'active', 'newest', 'popular', 'random', 'alphabetical' );
-	$bp_registration_groups_display_order = isset( $bp_registration_groups_options['bp_registration_groups_display_order'] ) ? $bp_registration_groups_options['bp_registration_groups_display_order'] : 'alphabetical';
-	if ( in_array( $bp_registration_groups_display_order, array( 'most-forum-topics', 'most-forum-posts' ), true ) ) {
-		$bp_registration_groups_display_order = 'active';
-	}
-	if ( ! in_array( $bp_registration_groups_display_order, $bp_registration_groups_display_order_options, true ) ) {
-		$bp_registration_groups_display_order = 'alphabetical';
-	}
-
-	// set $bp_registration_groups_display_as to 'reg_groups_list_multiselect' if the stored value is 2; set to 'reg_groups_list' otherwise
-	$bp_registration_groups_display_as = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] != '2' ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
+	// the list container class for the "Display As" setting
+	$bp_registration_groups_display_as = bp_registration_groups_get_list_class();
 
 	// set $bp_registration_groups_input_type to 'radio' if the stored value is 3; set to 'checkbox' otherwise
 	$bp_registration_groups_input_type = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] == '3' ) ? 'radio' : 'checkbox';
@@ -448,7 +504,7 @@ function bp_registration_groups() {
 	// groups excluded from the selectable list: per-group hidden groups, and
 	// auto-join groups (which are either left off the form entirely or
 	// rendered separately as locked entries)
-	$bp_registration_groups_excluded_ids = array_values( array_unique( array_merge( $bp_registration_groups_hidden_ids, $bp_registration_groups_autojoin_ids ) ) );
+	$bp_registration_groups_excluded_ids = bp_registration_groups_get_unselectable_group_ids();
 
 	// query args: the 'status' argument (BuddyPress 7.0+) restricts results to
 	// the allowed statuses, and per_page 0 returns every matching group
@@ -1154,6 +1210,15 @@ class BPRegistrationGroupsSettingsPage
       'bp-registration-groups-settings-admin',
       'bp_registration_groups_sections_section_id'
     );
+
+    // Help text only; the shortcode has no settings of its own.
+    add_settings_section(
+      'bp_registration_groups_join_shortcode_section_id',
+			/* translators: displays the section title for the join groups shortcode help on the plugin admin page */
+			__('Join Groups Shortcode', 'buddypress-registration-groups-1'),
+      array( $this, 'print_join_shortcode_section_info' ),
+      'bp-registration-groups-settings-admin'
+    );
   }
 
   /**
@@ -1543,6 +1608,23 @@ class BPRegistrationGroupsSettingsPage
   {
 		/* translators: displays the help text for the "Group Sections" section of the plugin admin page */
 		esc_html_e( 'Optionally organize the registration form into multiple titled sections (for example "Interests" and "Regions"), each offering only the groups you assign to it. While at least one section exists, the form shows only assigned groups, in the section order below; a group assigned to more than one section stays in the first section that lists it. With the Radio Buttons display, registrants can select one group per section. The per-group Hide, Checked by default, and Auto-join settings above still apply, and the "Number of Groups to Display" limit is ignored. Leave all sections empty to keep the single global list.', 'buddypress-registration-groups-1' );
+  }
+
+  /**
+   * Print the join groups shortcode section text
+   */
+  public function print_join_shortcode_section_info()
+  {
+		echo '<p>';
+		printf(
+			/* translators: %s: the shortcode, e.g. [bp_registration_groups_join]. Help text for the "Join Groups Shortcode" section of the plugin admin page */
+			esc_html__( 'Add the %s shortcode to any page to let logged-in members join groups after registration. It offers the same groups as the registration form: public groups are joined right away, and private groups (when "Show Private Groups" is on) get a membership request for a group administrator to approve.', 'buddypress-registration-groups-1' ),
+			'<code>[bp_registration_groups_join]</code>'
+		);
+		echo '</p><p>';
+		/* translators: help text for the "Join Groups Shortcode" section of the plugin admin page */
+		esc_html_e( 'It uses the Title, Description, Display Order, Show Private Groups, Number of Groups to Display, per-group Hide, and Group Sections settings, and "Display As" (Radio Buttons shows as checkboxes). Require Group Selection, Checked by default, and Auto-Join Display apply only to registration, and auto-join groups are not listed.', 'buddypress-registration-groups-1' );
+		echo '</p>';
   }
 
   /**

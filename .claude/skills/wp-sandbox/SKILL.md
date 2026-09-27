@@ -60,17 +60,21 @@ curl -sI --max-time 10 https://wordpress.org/ >/dev/null && echo REACHABLE || ec
 
 ```bash
 cd "$SANDBOX"   # your scratch dir
-curl -sSLo wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-chmod +x wp
+curl -sSLo wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+chmod +x wp-cli.phar
 ```
 
+Name the phar `wp-cli.phar`, not `wp`: WordPress itself goes in a `wp/`
+directory next to it, and a file named `wp` makes `core download --path=wp`
+fail with "mkdir(): File exists".
+
 Cloud sessions run as root, so every wp-cli call below needs `--allow-root`
-(define `WP() { "$SANDBOX/wp" --path="$SANDBOX/wp" --allow-root "$@"; }` or
-similar).
+(define `WP() { php "$SANDBOX/wp-cli.phar" --path="$SANDBOX/wp" --allow-root "$@"; }`
+or similar).
 
 ## Step 2 — get WordPress core
 
-**Path A:** `./wp core download --path=wp --allow-root`
+**Path A:** `WP core download`
 
 **Path B:** the `WordPress/WordPress` GitHub mirror at a release tag is
 *built* core, ready to run (unlike `WordPress/wordpress-develop`):
@@ -159,6 +163,12 @@ WP core install --url=http://127.0.0.1:8080 --title="BP Sandbox" \
   --admin_user=admin --admin_password=adminpass --admin_email=admin@example.test \
   --skip-email
 WP theme activate twentytwentyfive
+# Check the URLs: some installs store http://127.0.0.1:8080/wp (the
+# directory guessed from the script path), which makes every link and
+# asset 404 under the router below. Reset them if so.
+WP option get siteurl; WP option get home
+WP option update siteurl http://127.0.0.1:8080
+WP option update home http://127.0.0.1:8080
 ```
 
 ## Step 6 — activate plugins and install the BuddyPress schema
@@ -270,7 +280,16 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/wp-login.php   # 
 ```
 
 Watch `server.log` for PHP notices/warnings from the plugin — a clean log is
-part of "verified live".
+part of "verified live". `WP_DEBUG` is off by default, so notices are
+otherwise swallowed; turn logging on first:
+
+```bash
+WP config set WP_DEBUG true --raw
+WP config set WP_DEBUG_DISPLAY false --raw
+WP config set WP_DEBUG_LOG "'$SANDBOX/debug.log'" --raw
+```
+
+An absent `debug.log` after a run means nothing was logged.
 
 ## Live end-to-end verification
 
@@ -356,6 +375,32 @@ Per-shot state (everything else stays at the Step 7 baseline, which includes
 | 5 | Per-group options live | `display_as=1`, `autojoin_display=1` → Announcements as locked "(automatic)", Book Club pre-checked |
 | 6 | Required-selection error | `display_as=1`, `require_selection=1`, `autojoin_display=0` (7 groups, no Announcements); submit valid account details with nothing selected (uncheck the Book Club default first), capture the re-render with the inline error |
 | 7 | Group Sections live | `display_as=1`, baseline per-group rows, plus the two-section preset above → "Interests" and "Activities" render as separate titled sections, Book Club pre-checked |
+| 8 | Join Groups shortcode | See below |
+
+**Shot 8** shows the `[bp_registration_groups_join]` shortcode after a
+submission. Capture it **after** the others: it adds a ninth, private group,
+which would otherwise appear in shot 4's per-group table (delete it again
+before recapturing shot 4). Setup, on top of the Step 7 baseline:
+
+- create a private group "Secret Garden" (`"status" => "private"`) and set
+  `show_private_groups=1`, `display_as=1`;
+- publish a page "Choose Your Groups" (slug `choose-groups`) whose content is
+  a paragraph "Welcome aboard! Pick the groups you would like to join."
+  followed by a Shortcode block with `[bp_registration_groups_join]`;
+- create a subscriber "jamie" (display name Jamie) and make them a member of
+  Book Club and Announcements with `groups_join_group()` (as if joined at
+  registration).
+
+Log in as jamie, open `/choose-groups/`, check Cycling and Secret Garden, and
+click "Join selected groups". Capture the re-render (which shows "You joined
+Cycling." and the Secret Garden request, with Book Club and Cycling marked
+"(member)" and Secret Garden "(request pending)") with the form-shot
+conventions above, except the clip starts just above the "Groups" heading so
+the intro paragraph is not sliced: with `g` = bounding box of
+`.reg_groups_join` and `s` = the submit button's box, use
+`{ x: g.x - 30, y: g.y - 24, width: 701, height: (s.y + s.height + 24) - (g.y - 24) }`.
+To retake it, first reset jamie: `groups_leave_group()` Cycling and
+`groups_delete_membership_request( null, $jamie_id, $secret_garden_id )`.
 
 After capturing, verify dimensions match the set
 (`file .wordpress-org/screenshot-*.png` — 1402-wide form shots, 2156-wide

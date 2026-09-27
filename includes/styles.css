@@ -115,3 +115,53 @@
 	width: 100%;
 	flex: 1 100%;
 }
+
+/**
+ * Join Groups shortcode ([bp_registration_groups_join]). Shares the item,
+ * checkbox, label, multiselect, and section classes above; these rules only
+ * cover what differs on an ordinary page.
+ */
+.reg_groups_join .reg_groups_fieldset {
+	border: 0;
+	padding: 0;
+	margin: 0 0 12px;
+	min-width: 0;
+	background: transparent;
+}
+
+.reg_groups_join ul.reg_groups_list,
+.reg_groups_join ul.reg_groups_list_multiselect {
+	margin: 0;
+	padding-left: 0;
+}
+
+.reg_groups_join ul.reg_groups_list_multiselect {
+	padding: 6px;
+}
+
+.reg_groups_status {
+	font-style: italic;
+	color: gray;
+	font-size: 0.9em;
+}
+
+.reg_groups_join .reg_groups_error {
+	border-left: 4px solid #b32d2e;
+	background: #fcf0f1;
+	color: #b32d2e;
+	padding: 8px 12px;
+	margin: 0 0 10px;
+}
+
+.reg_groups_join_results {
+	border-left: 4px solid #00a32a;
+	background: #edfaef;
+	padding: 8px 12px;
+	margin: 0 0 10px;
+}
+
+.reg_groups_join_results ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
