@@ -12,7 +12,7 @@ Requires PHP: 7.4
 
 License: GPLv2 or later
 
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 
 The BuddyPress Registration Groups plugin also lives in the official WordPress plugins repository here: [http://wordpress.org/plugins/buddypress-registration-groups-1/](http://wordpress.org/plugins/buddypress-registration-groups-1/).
 
@@ -26,30 +26,15 @@ This plugin is built to display BuddyPress groups on the new user registration p
 
 New users will automatically join any of the groups selected during the registration process.
 
-Options are available in the admin area to configure the title of the groups list on the registration page, the
-description of the groups list, whether private groups are visible to new users, the order in which groups are
-displayed, and how many groups will be visible.
+Options are available in the admin area to configure the title of the groups list on the registration page, the description of the groups list, whether private groups are visible to new users, the order in which groups are displayed, and how many groups will be visible.
 
-Per-group options let you fine-tune individual groups: hide a group from the registration form, pre-check a group
-by default, or mark a group as auto-join so every new user becomes a member automatically. Auto-join groups can be
-left off the form entirely or shown as pre-checked, locked entries labeled "(automatic)".
+Per-group options let you fine-tune individual groups: hide a group from the registration form, pre-check a group by default, or mark a group as auto-join so every new user becomes a member automatically. Auto-join groups can be left off the form entirely or shown as pre-checked, locked entries labeled "(automatic)".
 
-An optional "Require Group Selection" setting (off by default) prevents signup from completing until the registrant
-selects at least one group. The requirement is validated on the server when the form is submitted, works with both
-checkbox and radio button display modes, and is skipped automatically if no selectable groups exist so registration
-is never blocked by a misconfiguration.
+An optional "Require Group Selection" setting (off by default) prevents signup from completing until the registrant selects at least one group. The requirement is validated on the server when the form is submitted, works with both checkbox and radio button display modes, and is skipped automatically if no selectable groups exist so registration is never blocked by a misconfiguration.
 
-Optional Group Sections let you organize the registration form into multiple titled sections — for example
-"Interests" and "Regions" — each with its own description and its own curated set of groups. While at least one
-section is configured, the form offers only the groups you assigned, each in exactly one section, and with the
-radio button display registrants can select one group per section. Leave the sections empty to keep the classic
-single list; existing installations render exactly as before.
+Optional Group Sections let you organize the registration form into multiple titled sections — for example "Interests" and "Regions" — each with its own description and its own curated set of groups. While at least one section is configured, the form offers only the groups you assigned, each in exactly one section, and with the radio button display registrants can select one group per section. Leave the sections empty to keep the classic single list; existing installations render exactly as before.
 
-The `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, for example on a
-welcome page later in onboarding, or on sites where members sign up through something other than the BuddyPress
-registration form. It offers the same curated groups as the registration form, marks the groups a member already
-belongs to, joins public groups right away, and sends a membership request for private groups (when "Show Private
-Groups" is on). Logged-out visitors see a log-in link.
+The `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, for example on a welcome page later in onboarding, or on sites where members sign up through something other than the BuddyPress registration form. It offers the same curated groups as the registration form, marks the groups a member already belongs to, joins public groups right away, and sends a membership request for private groups (when "Show Private Groups" is on). Logged-out visitors see a log-in link.
 
 Requires BuddyPress with the Groups component enabled (BuddyPress 7.0 or newer recommended; tested with BuddyPress 14.5).
 
@@ -254,6 +239,10 @@ capturing the wordpress.org screenshots in `.wordpress-org/`. Like `tests/` and 
 
 Changelog
 ---------
+### 1.6.1
+* Fix: remove manual line wrapping from the plugin description so WordPress.org renders prose as normal flowing paragraphs instead of inserting visible hard breaks.
+* Add a regression test that prevents hard-wrapped description paragraphs from returning.
+
 ### 1.6.0
 * New: the `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, from any page. Requested in the wordpress.org support forum.
 * The shortcode offers exactly the groups the registration form offers (the same eligibility rules via `bp_registration_groups_get_valid_submitted_group_ids()`, per-group Hide, and Group Sections), marks groups the member already belongs to or has asked to join, and reports what happened to each selection.
