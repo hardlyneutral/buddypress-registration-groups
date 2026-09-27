@@ -36,15 +36,21 @@ bprg_assert_true( isset( $GLOBALS['bprg_test']['shortcodes']['bp_registration_gr
 // Logged out: a log-in prompt, no form, no group names.
 // -------------------------------------------------------------------
 bprg_test_set_user( 0 );
-$output = bprg_test_do_shortcode( 'bp_registration_groups_join' );
+$_SERVER['REQUEST_URI'] = '/choose-groups/?step=2';
+$output                 = bprg_test_do_shortcode( 'bp_registration_groups_join' );
 
 bprg_assert_true( false !== strpos( $output, 'Please log in to choose groups to join.' ), 'logged out: the log-in message renders' );
 bprg_assert_true(
-	false !== strpos( $output, 'href="http://example.test/wp-login.php?redirect_to=' . rawurlencode( 'http://example.test/choose-groups/' ) . '"' ),
-	'logged out: the log-in link returns the visitor to this page'
+	false !== strpos( $output, 'href="http://example.test/wp-login.php?redirect_to=' . rawurlencode( '/choose-groups/?step=2' ) . '"' ),
+	'logged out: the log-in link returns the visitor to this exact page, outside the loop too'
 );
 bprg_assert_true( false === strpos( $output, '<form' ), 'logged out: no form renders' );
 bprg_assert_true( false === strpos( $output, 'Book Club' ), 'logged out: no group names render' );
+
+$_SERVER['REQUEST_URI'] = '//evil.example/phish';
+bprg_assert_same( 'http://example.test/', bp_registration_groups_join_current_url(), 'an off-site request URI falls back to the home page' );
+unset( $_SERVER['REQUEST_URI'] );
+bprg_assert_same( 'http://example.test/', bp_registration_groups_join_current_url(), 'a missing request URI falls back to the home page' );
 
 // -------------------------------------------------------------------
 // Logged in: the offered list with each group's state.

@@ -10,6 +10,8 @@
  * - existing members and pending requests are handled idempotently;
  * - bans, other plugins' capability denials, and join failures are reported;
  * - the nonce is required and bound to the user;
+ * - a processed submission redirects back to the page (Post/Redirect/Get),
+ *   and its outcome is reported once on the page view that follows;
  * - the signup flow's field and hooks are not involved.
  */
 
@@ -36,11 +38,28 @@ $GLOBALS['bprg_test']['members'][42][4]  = true;
 $GLOBALS['bprg_test']['banned'][42][8]   = true;
 $GLOBALS['bprg_test']['invites'][42][13] = true;
 
+/*
+ * Simulate a POST request to the shortcode page. If the handler redirects,
+ * simulate the browser's follow-up GET: a new request with no POST data.
+ * Returns what the shortcode would report on the page that is finally shown.
+ */
 function bprg_test_submit( $post ) {
-	$_POST = $post;
-	do_action( 'template_redirect' );
+	bp_registration_groups_join_results( false );
+	$GLOBALS['bprg_test']['redirects'] = array();
+	$_POST                             = $post;
+
+	try {
+		do_action( 'template_redirect' );
+	} catch ( BPRG_Test_Redirect $redirect ) {
+		$_POST = array();
+		bp_registration_groups_join_results( false );
+		do_action( 'template_redirect' );
+	}
+
 	return bp_registration_groups_join_results();
 }
+
+$_SERVER['REQUEST_URI'] = '/choose-groups/?ref=welcome';
 
 function bprg_test_ids( $groups ) {
 	return array_map( function ( $group ) {
@@ -127,6 +146,8 @@ $results = bprg_test_submit( array(
 	'bp_registration_groups_join_user'   => '7',
 ) );
 
+bprg_assert_same( array( array( '/choose-groups/?ref=welcome', 303 ) ), $GLOBALS['bprg_test']['redirects'], 'a processed submission redirects back to the same page with a 303' );
+bprg_assert_same( array(), $GLOBALS['bprg_test']['transients'], 'the page view after the redirect consumed the stored outcome' );
 bprg_assert_same( '', $results['error'], 'a valid submission has no error' );
 bprg_assert_same( array( 2 ), bprg_test_ids( $results['joined'] ), 'the public group is joined' );
 bprg_assert_same( array( 5 ), bprg_test_ids( $results['requested'] ), 'the private group gets a membership request' );
@@ -154,8 +175,69 @@ bprg_assert_true(
 	'the list reflects the new membership and the pending request'
 );
 
+// Reloading the page after the redirect is a plain GET: nothing is sent
+// again and the outcome is not reported twice.
+bp_registration_groups_join_results( false );
+do_action( 'template_redirect' );
+bprg_assert_same( null, bp_registration_groups_join_results(), 'reloading the page reports nothing again' );
+bprg_assert_same( 1, count( $GLOBALS['bprg_test']['joins'] ), 'reloading the page joins nothing again' );
+
+// The reviewer's case: a member leaves a group they joined here, then
+// reloads the page. Without the redirect, the browser would resend the join.
+unset( $GLOBALS['bprg_test']['members'][42][2] );
+bp_registration_groups_join_results( false );
+$output = bprg_test_do_shortcode( 'bp_registration_groups_join' );
+bprg_assert_true( empty( $GLOBALS['bprg_test']['members'][42][2] ), 'a group left after joining stays left when the page is reloaded' );
+bprg_assert_true( 1 === preg_match( '/name="bp_registration_groups_join\[\]" value="2"/', $output ), 'the left group is offered again, unchecked' );
+$GLOBALS['bprg_test']['members'][42][2] = true;
+
+// The outcome is stored per user: another member's page view does not see it.
+bp_registration_groups_join_results( false );
+$_POST = array(
+	'bp_registration_groups_join_action' => 'join',
+	'bp_registration_groups_join_nonce'  => wp_create_nonce( 'bp_registration_groups_join' ),
+	'bp_registration_groups_join'        => array( '4' ),
+);
+try {
+	do_action( 'template_redirect' );
+} catch ( BPRG_Test_Redirect $redirect ) {
+	$_POST = array();
+}
+bprg_test_set_user( 7 );
+bp_registration_groups_join_results( false );
+bprg_assert_same( null, bp_registration_groups_join_results(), "another member's page view does not see the outcome" );
+bprg_test_set_user( 42 );
+bp_registration_groups_join_results( false );
+bprg_assert_same( array( 4 ), bprg_test_ids( bp_registration_groups_join_results()['member'] ), 'the submitting member sees it on their next page view' );
+
+// A 'wp_redirect' filter can cancel the redirect: the outcome is then
+// reported on the POST response itself and nothing is left stored.
+$GLOBALS['bprg_test']['cancel_redirects'] = true;
+bp_registration_groups_join_results( false );
+$_POST = array(
+	'bp_registration_groups_join_action' => 'join',
+	'bp_registration_groups_join_nonce'  => wp_create_nonce( 'bp_registration_groups_join' ),
+	'bp_registration_groups_join'        => array( '4' ),
+);
+do_action( 'template_redirect' );
+$results = bp_registration_groups_join_results();
+bprg_assert_same( array( 4 ), bprg_test_ids( $results['member'] ), 'a cancelled redirect reports on the same response' );
+bprg_assert_same( array(), $GLOBALS['bprg_test']['transients'], 'a cancelled redirect leaves no stored outcome behind' );
+$GLOBALS['bprg_test']['cancel_redirects'] = false;
+$_POST                                    = array();
+
+// Error responses change nothing, so they are rendered directly.
+$GLOBALS['bprg_test']['redirects'] = array();
+bprg_test_submit( array(
+	'bp_registration_groups_join_action' => 'join',
+	'bp_registration_groups_join_nonce'  => 'forged',
+	'bp_registration_groups_join'        => array( '2' ),
+) );
+bprg_assert_same( array(), $GLOBALS['bprg_test']['redirects'], 'an expired form is not redirected' );
+
 // -------------------------------------------------------------------
-// Resubmitting (e.g. a page refresh) is idempotent.
+// Resubmitting the same POST (e.g. a double-click, or a replayed request)
+// is idempotent.
 // -------------------------------------------------------------------
 $results = bprg_test_submit( array(
 	'bp_registration_groups_join_action' => 'join',

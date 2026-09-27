@@ -82,6 +82,19 @@ function bp_registration_groups_get_id_list_option( $key ) {
 }
 
 /**
+* bp_registration_groups_get_unselectable_group_ids()
+*
+* Group IDs the registration form never offers as a choice: per-group hidden
+* groups and auto-join groups (which are joined automatically instead).
+*/
+function bp_registration_groups_get_unselectable_group_ids() {
+	return array_values( array_unique( array_merge(
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
+		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
+	) ) );
+}
+
+/**
 * bp_registration_groups_get_sections()
 *
 * The ordered, curated group sections the site owner configured, as a clean
@@ -188,6 +201,19 @@ function bp_registration_groups_get_display_order() {
 }
 
 /**
+* bp_registration_groups_get_list_class()
+*
+* The class of the group list container for the "Display As" setting:
+* 'reg_groups_list_multiselect' (the scrollable box) when the setting is
+* unset or "Checkboxes Multiselect", 'reg_groups_list' otherwise.
+*/
+function bp_registration_groups_get_list_class() {
+	$options = get_option( 'bp_registration_groups_option_handle' );
+
+	return ( isset( $options['bp_registration_groups_display_as'] ) && '2' != $options['bp_registration_groups_display_as'] ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
+}
+
+/**
 * bp_registration_groups_autojoin_shows_locked()
 *
 * Whether auto-join groups appear on the registration form as pre-checked,
@@ -256,10 +282,7 @@ function bp_registration_groups_get_valid_submitted_group_ids( $submitted_ids = 
 	}
 
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
-	$not_selectable   = array_merge(
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-	);
+	$not_selectable   = bp_registration_groups_get_unselectable_group_ids();
 	$sections_active  = ! empty( bp_registration_groups_get_sections() );
 	$section_ids      = $sections_active ? bp_registration_groups_get_section_group_ids() : array();
 	$valid_group_ids  = array();
@@ -292,10 +315,7 @@ function bp_registration_groups_get_valid_submitted_group_ids( $submitted_ids = 
 */
 function bp_registration_groups_has_selectable_groups() {
 	$allowed_statuses = bp_registration_groups_allowed_statuses();
-	$excluded_ids     = array_merge(
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-		bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-	);
+	$excluded_ids     = bp_registration_groups_get_unselectable_group_ids();
 
 	// When curated sections are configured, only groups assigned to a
 	// section are offered, so selectability is decided over that set alone.
@@ -464,8 +484,8 @@ function bp_registration_groups() {
 	$bp_registration_groups_description   = bp_registration_groups_get_description();
 	$bp_registration_groups_display_order = bp_registration_groups_get_display_order();
 
-	// set $bp_registration_groups_display_as to 'reg_groups_list_multiselect' if the stored value is 2; set to 'reg_groups_list' otherwise
-	$bp_registration_groups_display_as = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] != '2' ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
+	// the list container class for the "Display As" setting
+	$bp_registration_groups_display_as = bp_registration_groups_get_list_class();
 
 	// set $bp_registration_groups_input_type to 'radio' if the stored value is 3; set to 'checkbox' otherwise
 	$bp_registration_groups_input_type = ( isset( $bp_registration_groups_options['bp_registration_groups_display_as'] ) && $bp_registration_groups_options['bp_registration_groups_display_as'] == '3' ) ? 'radio' : 'checkbox';
@@ -484,7 +504,7 @@ function bp_registration_groups() {
 	// groups excluded from the selectable list: per-group hidden groups, and
 	// auto-join groups (which are either left off the form entirely or
 	// rendered separately as locked entries)
-	$bp_registration_groups_excluded_ids = array_values( array_unique( array_merge( $bp_registration_groups_hidden_ids, $bp_registration_groups_autojoin_ids ) ) );
+	$bp_registration_groups_excluded_ids = bp_registration_groups_get_unselectable_group_ids();
 
 	// query args: the 'status' argument (BuddyPress 7.0+) restricts results to
 	// the allowed statuses, and per_page 0 returns every matching group

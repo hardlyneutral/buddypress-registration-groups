@@ -60,10 +60,7 @@ function bp_registration_groups_join_get_offered_sections() {
 	if ( empty( $sections ) ) {
 		$options      = get_option( 'bp_registration_groups_option_handle' );
 		$number       = isset( $options['bp_registration_groups_number_displayed'] ) ? absint( $options['bp_registration_groups_number_displayed'] ) : 0;
-		$excluded_ids = array_values( array_unique( array_merge(
-			bp_registration_groups_get_id_list_option( 'bp_registration_groups_hidden_groups' ),
-			bp_registration_groups_get_id_list_option( 'bp_registration_groups_autojoin_groups' )
-		) ) );
+		$excluded_ids = bp_registration_groups_get_unselectable_group_ids();
 
 		// groups_get_groups() never reads the query string, unlike the
 		// bp_has_groups() template loop, so ?num= and ?s= cannot reshape it.
@@ -101,14 +98,16 @@ function bp_registration_groups_join_get_offered_sections() {
 		);
 	}
 
-	$offered  = array();
-	$seen_ids = array();
+	// Check every assigned group once, then split the result by section.
+	$eligible_ids = array_flip( bp_registration_groups_get_valid_submitted_group_ids( bp_registration_groups_get_section_group_ids() ) );
+	$offered      = array();
+	$seen_ids     = array();
 
 	foreach ( $sections as $section ) {
 		$groups = array();
 
-		foreach ( bp_registration_groups_get_valid_submitted_group_ids( $section['groups'] ) as $group_id ) {
-			if ( isset( $seen_ids[ $group_id ] ) ) {
+		foreach ( $section['groups'] as $group_id ) {
+			if ( ! isset( $eligible_ids[ $group_id ] ) || isset( $seen_ids[ $group_id ] ) ) {
 				continue;
 			}
 			$seen_ids[ $group_id ] = true;
@@ -176,7 +175,9 @@ function bp_registration_groups_join_get_group_state( $group, $user_id ) {
 *
 * Returns an array with 'joined', 'requested', 'member', 'pending', and
 * 'unavailable' lists of group objects, a 'skipped' count of IDs that were not
-* offered, and an 'error' code ('' on success, 'logged_out', or 'empty').
+* offered, and an 'error' code: '' on success, 'empty' when no valid ID was
+* submitted, or 'logged_out' when there is no logged-in user (a guard for
+* direct callers; the submission handler never gets that far without one).
 */
 function bp_registration_groups_join_selected_groups( $submitted_ids ) {
 	$results = array(
@@ -249,20 +250,98 @@ function bp_registration_groups_join_selected_groups( $submitted_ids ) {
 }
 
 /**
+* bp_registration_groups_join_results_transient()
+*
+* The name of the transient that carries a member's submission outcome across
+* the Post/Redirect/Get redirect.
+*/
+function bp_registration_groups_join_results_transient( $user_id ) {
+	return 'bp_registration_groups_join_results_' . absint( $user_id );
+}
+
+/**
 * bp_registration_groups_join_results()
 *
-* Hold the outcome of this request's shortcode submission so the shortcode
-* can report it while rendering. Pass an array to store it; call with no
-* argument to read it (null when nothing was submitted).
+* The outcome of the member's latest shortcode submission, for the shortcode
+* to report while rendering. Pass an array to store it for this request, or
+* false to forget it; call with no argument to read it (null when there is
+* nothing to report).
+*
+* After a successful submission the handler redirects, so the outcome arrives
+* on the next page view through a short-lived per-user transient, stored as
+* group IDs. The first read in a request takes it (and deletes it) so it is
+* reported once, by every shortcode instance of that request.
 */
 function bp_registration_groups_join_results( $results = null ) {
 	static $stored = null;
+	static $loaded = false;
 
-	if ( null !== $results ) {
+	if ( false === $results ) {
+		$stored = null;
+		$loaded = false;
+		return null;
+	}
+
+	if ( is_array( $results ) ) {
 		$stored = $results;
+		$loaded = true;
+		return $stored;
+	}
+
+	if ( $loaded ) {
+		return $stored;
+	}
+	$loaded = true;
+
+	$user_id = get_current_user_id();
+
+	if ( ! $user_id ) {
+		return $stored;
+	}
+
+	$transient = bp_registration_groups_join_results_transient( $user_id );
+	$saved     = get_transient( $transient );
+
+	if ( ! is_array( $saved ) ) {
+		return $stored;
+	}
+
+	delete_transient( $transient );
+
+	$stored = array(
+		'skipped' => isset( $saved['skipped'] ) ? absint( $saved['skipped'] ) : 0,
+		'error'   => '',
+	);
+
+	foreach ( array( 'joined', 'requested', 'member', 'pending', 'unavailable' ) as $key ) {
+		$stored[ $key ] = array();
+
+		foreach ( bp_registration_groups_clean_id_list( isset( $saved[ $key ] ) ? $saved[ $key ] : array() ) as $group_id ) {
+			$group = groups_get_group( $group_id );
+
+			// A group deleted since the submission is simply not reported.
+			if ( ! empty( $group->id ) ) {
+				$stored[ $key ][] = $group;
+			}
+		}
 	}
 
 	return $stored;
+}
+
+/**
+* bp_registration_groups_join_current_url()
+*
+* The current request's URL as a same-site location, for sending the member
+* back to this page after logging in or submitting. Unlike get_permalink(),
+* this also works outside the loop (widgets, templates, archives). Falls back
+* to the home page.
+*/
+function bp_registration_groups_join_current_url() {
+	$request_uri = ( isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+	$location    = '' !== $request_uri ? wp_validate_redirect( $request_uri, '' ) : '';
+
+	return '' !== $location ? $location : home_url( '/' );
 }
 
 /**
@@ -271,6 +350,11 @@ function bp_registration_groups_join_results( $results = null ) {
 * Process a shortcode form submission before any output is sent. The form
 * posts back to the page it is on; this verifies the logged-in user and the
 * nonce, then joins/requests the selected groups for that user only.
+*
+* When something was processed, the member is redirected back to the page
+* (Post/Redirect/Get) so reloading it or navigating back and forward cannot
+* send the submission again. Errors (an expired form, nothing selected)
+* change nothing and are reported on the response itself.
 */
 add_action( 'template_redirect', 'bp_registration_groups_join_handle_submission' );
 function bp_registration_groups_join_handle_submission() {
@@ -295,7 +379,30 @@ function bp_registration_groups_join_handle_submission() {
 	// digit strings survive, anything else is dropped.
 	$submitted_ids = isset( $_POST['bp_registration_groups_join'] ) ? (array) wp_unslash( $_POST['bp_registration_groups_join'] ) : array();
 
-	bp_registration_groups_join_results( bp_registration_groups_join_selected_groups( $submitted_ids ) );
+	$results = bp_registration_groups_join_selected_groups( $submitted_ids );
+
+	if ( '' !== $results['error'] ) {
+		bp_registration_groups_join_results( $results );
+		return;
+	}
+
+	$saved = array( 'skipped' => $results['skipped'] );
+	foreach ( array( 'joined', 'requested', 'member', 'pending', 'unavailable' ) as $key ) {
+		$saved[ $key ] = array_map( function ( $group ) {
+			return absint( $group->id );
+		}, $results[ $key ] );
+	}
+
+	$transient = bp_registration_groups_join_results_transient( get_current_user_id() );
+	set_transient( $transient, $saved, 5 * MINUTE_IN_SECONDS );
+
+	if ( wp_safe_redirect( bp_registration_groups_join_current_url(), 303 ) ) {
+		exit;
+	}
+
+	// A 'wp_redirect' filter cancelled the redirect: report on this response.
+	delete_transient( $transient );
+	bp_registration_groups_join_results( $results );
 }
 
 /**
@@ -325,6 +432,8 @@ function bp_registration_groups_join_result_messages( $results ) {
 		return $messages;
 	}
 
+	// Any other error ('logged_out') needs no message: logged-out visitors
+	// see the log-in prompt instead of the form.
 	if ( '' !== $error ) {
 		return $messages;
 	}
@@ -372,7 +481,7 @@ function bp_registration_groups_join_result_messages( $results ) {
 * to join the ones they have not joined yet, and the outcome of their last
 * submission.
 */
-function bp_registration_groups_join_shortcode( $atts = array() ) {
+function bp_registration_groups_join_shortcode() {
 	// Each instance gets its own ID prefix so a page can hold the shortcode
 	// more than once without duplicate IDs.
 	static $instance = 0;
@@ -385,7 +494,7 @@ function bp_registration_groups_join_shortcode( $atts = array() ) {
 			'<div class="reg_groups_join"><p class="reg_groups_join_login">%1$s <a href="%2$s">%3$s</a></p></div>',
 			/* translators: shown by the join groups shortcode to visitors who are not logged in */
 			esc_html__( 'Please log in to choose groups to join.', 'buddypress-registration-groups-1' ),
-			esc_url( wp_login_url( (string) get_permalink() ) ),
+			esc_url( wp_login_url( bp_registration_groups_join_current_url() ) ),
 			/* translators: link text shown by the join groups shortcode to visitors who are not logged in */
 			esc_html__( 'Log in', 'buddypress-registration-groups-1' )
 		);
@@ -393,11 +502,10 @@ function bp_registration_groups_join_shortcode( $atts = array() ) {
 
 	$user_id = get_current_user_id();
 	$prefix  = 'reg-groups-join-' . $instance;
-	$options = get_option( 'bp_registration_groups_option_handle' );
 
 	// "Display As": the scrollable box (the default) or a plain list. Radio
 	// Buttons is a registration-only mode and renders as the plain list.
-	$list_class = ( isset( $options['bp_registration_groups_display_as'] ) && '2' != $options['bp_registration_groups_display_as'] ) ? 'reg_groups_list' : 'reg_groups_list_multiselect';
+	$list_class = bp_registration_groups_get_list_class();
 
 	// Report the outcome of this request's submission. Every instance shows
 	// it: some plugins render post content early (e.g. for meta

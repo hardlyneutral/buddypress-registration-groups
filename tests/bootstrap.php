@@ -14,6 +14,7 @@
 
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'BP_REGISTRATION_GROUPS_VERSION', 'test' );
+define( 'MINUTE_IN_SECONDS', 60 );
 
 $GLOBALS['bprg_test'] = array(
 	'options'         => array(),
@@ -27,6 +28,8 @@ $GLOBALS['bprg_test'] = array(
 	'cap_denied'      => array(), // list of array( capability, group_id ) denied by "another plugin"
 	'current_user_id' => 0,
 	'shortcodes'      => array(), // tag => callback
+	'transients'      => array(), // name => value
+	'redirects'       => array(), // list of array( location, status )
 	'hooks'           => array(), // hook name => list of callbacks
 	'loop'            => array(),
 	'loop_i'          => -1,
@@ -134,8 +137,59 @@ function wp_login_url( $redirect = '' ) {
 	return $url;
 }
 
-function get_permalink( $post = 0 ) {
-	return 'http://example.test/choose-groups/';
+function home_url( $path = '' ) {
+	return 'http://example.test' . ( '' !== $path ? '/' . ltrim( $path, '/' ) : '' );
+}
+
+function esc_url_raw( $url ) {
+	return trim( (string) $url );
+}
+
+/*
+ * Like WordPress: same-site paths and URLs on the site's host pass; other
+ * hosts (including protocol-relative '//host' paths) get the fallback.
+ */
+function wp_validate_redirect( $location, $fallback = '' ) {
+	$location = trim( (string) $location );
+	if ( '//' === substr( $location, 0, 2 ) ) {
+		$location = 'http:' . $location;
+	}
+	$host = parse_url( $location, PHP_URL_HOST );
+	if ( empty( $host ) ) {
+		return ( '' !== $location && '/' === $location[0] ) ? $location : $fallback;
+	}
+	return 'example.test' === $host ? $location : $fallback;
+}
+
+/*
+ * A redirect ends the request in WordPress (the caller exits), so the stub
+ * records it and throws BPRG_Test_Redirect for the test to catch. Setting
+ * bprg_test.cancel_redirects models a 'wp_redirect' filter cancelling it:
+ * the stub then returns false, as WordPress does.
+ */
+class BPRG_Test_Redirect extends Exception {}
+
+function wp_safe_redirect( $location, $status = 302 ) {
+	$location = wp_validate_redirect( $location, 'http://example.test/wp-admin/' );
+	$GLOBALS['bprg_test']['redirects'][] = array( $location, $status );
+	if ( ! empty( $GLOBALS['bprg_test']['cancel_redirects'] ) ) {
+		return false;
+	}
+	throw new BPRG_Test_Redirect( $location );
+}
+
+function set_transient( $name, $value, $expiration = 0 ) {
+	$GLOBALS['bprg_test']['transients'][ $name ] = $value;
+	return true;
+}
+
+function get_transient( $name ) {
+	return array_key_exists( $name, $GLOBALS['bprg_test']['transients'] ) ? $GLOBALS['bprg_test']['transients'][ $name ] : false;
+}
+
+function delete_transient( $name ) {
+	unset( $GLOBALS['bprg_test']['transients'][ $name ] );
+	return true;
 }
 
 /* Minimal WP_Error / is_wp_error, enough for the REST validation path. */

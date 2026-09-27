@@ -254,8 +254,9 @@ Group Section).
 Yes. Add the `[bp_registration_groups_join]` shortcode to any page (in the block editor, use a Shortcode block).
 Logged-in members see the groups the registration form offers, with "(member)" or "(request pending)" next to the ones
 that already apply, and can join the rest: public groups immediately, and private groups by a membership request that a
-group administrator approves. After submitting, the page lists what happened to each selected group. Logged-out visitors
-see a message with a log-in link.
+group administrator approves. After submitting, the page reloads and lists what happened to each selected group, so
+refreshing it never sends the form again. Logged-out visitors see a message with a log-in link. The shortcode relies on
+BuddyPress's group permission checks, so it needs BuddyPress 6.0 or newer.
 
 The shortcode uses the Title, Description, Display Order, Show Private Groups, Number of Groups to Display, per-group
 Hide, and Group Sections settings, plus the checkbox styles from "Display As" (Radio Buttons shows as checkboxes).
@@ -289,7 +290,7 @@ Make sure BuddyPress is installed and active, the Groups component is enabled (S
 * New: the `[bp_registration_groups_join]` shortcode lets logged-in members join groups after registration, from any page. Requested in the wordpress.org support forum.
 * The shortcode offers exactly the groups the registration form offers (the same eligibility rules, per-group Hide, and Group Sections), marks groups the member already belongs to or has asked to join, and reports what happened to each selection.
 * Public groups are joined right away. Private groups, when "Show Private Groups" is on, get a BuddyPress membership request for a group administrator to approve; they are never joined directly. BuddyPress's own permission checks apply, so banned members cannot rejoin.
-* Security: submissions require a nonce, only ever change the logged-in member's own memberships, and ignore any group ID the page does not offer (hidden, private while private groups are off, auto-join, unassigned to a section, or nonexistent), without naming it. Resubmitting is harmless: existing memberships and pending requests are reported, not repeated.
+* Security: submissions require a nonce, only ever change the logged-in member's own memberships, and ignore any group ID the page does not offer (hidden, private while private groups are off, auto-join, unassigned to a section, or nonexistent), without naming it. After a submission the member is redirected back to the page (Post/Redirect/Get), so refreshing or navigating back cannot resend it, and a replayed submission is harmless anyway: existing memberships and pending requests are reported, not repeated.
 * Registration-only settings (Require Group Selection, Radio Buttons, Checked by default, Auto-Join Display) do not apply to the shortcode, and the signup and activation flow is unchanged.
 * The settings page has a new "Join Groups Shortcode" section explaining the shortcode, and a new screenshot shows it in action.
 * Expanded the regression suite (three new test files) and extended the test stubs to model the current user, nonces, memberships, membership requests, bans, and BuddyPress's group capabilities.
