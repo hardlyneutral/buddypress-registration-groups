@@ -3,7 +3,7 @@ Contributors: hardlyneutral
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=TYJT5VMV8YMVQ
 Tags: buddypress, groups, registration, autojoin, multisite
 Requires at least: 6.1
-Tested up to: 7.0
+Tested up to: 7.2
 Requires PHP: 7.4
 Stable tag: 1.6.1
 License: GPLv2 or later

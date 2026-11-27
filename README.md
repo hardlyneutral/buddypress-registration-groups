@@ -6,7 +6,7 @@ Tags: buddypress, groups, registration, autojoin, multisite
 
 Requires at least: WordPress 6.1
 
-Tested up to: WordPress 7.0 (with BuddyPress 14.5, PHP 8.4)
+Tested up to: WordPress 7.2 RC3 (with BuddyPress 14.5.7, PHP 8.2.29)
 
 Requires PHP: 7.4
 
